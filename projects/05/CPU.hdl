@@ -1,0 +1,108 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/05/CPU.hdl
+
+/**
+ * The Hack CPU (Central Processing unit), consisting of an ALU,
+ * two registers named A and D, and a program counter named PC.
+ * The CPU is designed to fetch and execute instructions written in 
+ * the Hack machine language. In particular, functions as follows:
+ * Executes the inputted instruction according to the Hack machine 
+ * language specification. The D and A in the language specification
+ * refer to CPU-resident registers, while M refers to the external
+ * memory location addressed by A, i.e. to Memory[A]. The inM input 
+ * holds the value of this location. If the current instruction needs 
+ * to write a value to M, the value is placed in outM, the address 
+ * of the target location is placed in the addressM output, and the 
+ * writeM control bit is asserted. (When writeM==0, any value may 
+ * appear in outM). The outM and writeM outputs are combinational: 
+ * they are affected instantaneously by the execution of the current 
+ * instruction. The addressM and pc outputs are clocked: although they 
+ * are affected by the execution of the current instruction, they commit 
+ * to their new values only in the next time step. If reset==1 then the 
+ * CPU jumps to address 0 (i.e. pc is set to 0 in next time step) rather 
+ * than to the address resulting from executing the current instruction. 
+ */
+
+CHIP CPU {
+
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset==1) or continue executing
+                         // the current program (reset==0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write to M? 
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+
+    PARTS:
+    // Put your code here:
+    // Name the sub-bits of the instruction bus.
+    And(a=instruction[15], b=true, out=OpCode);
+    And(a=instruction[12], b=true, out=AddressBit);
+    And(a=instruction[5], b=true, out=ADestReg);
+    And(a=instruction[4], b=true, out=DDestReg);
+    And(a=instruction[3], b=true, out=MDestReg);
+    // j1 = JLT, j2 = JEQ, j3 = JGT
+    And(a=instruction[2], b=true, out=JLTin);
+    And(a=instruction[1], b=true, out=JEQin);
+    And(a=instruction[0], b=true, out=JGTin);
+    // OpCode
+    Not(in=OpCode, out=AOpCode);
+    Not(in=AOpCode, out=COpCode);
+ 
+    // either i = 0 [15] or d1 = 1 [5] > load register
+
+    // Load ARegister if it is a destination or this is A Opcode
+    Or(a=AOpCode, b=ADestReg, out=SelAReg);
+    // Chose A Register input from instruction or ALU
+    And(a=COpCode, b=true, out=AMuxSel);
+    Mux16(a=instruction, b=outA, sel=AMuxSel, out=AMuxOut);
+    // A register outputs to addressM and pc
+    ARegister(in=AMuxOut,  load=SelAReg, out=ARegOut, out[0..14]=addressM, out=PCIn);
+
+    // A or M multiplexer - selected on 'a' bit (12)
+    And(a=AddressBit, b=true, out=AMSel);
+    Mux16(a=ARegOut, b=inM, sel=AMSel, out=AMOut);
+
+    // D Register - Load if is a destination (d3) and C Opcode
+    And(a=DDestReg, b=COpCode, out=DRegSel);
+    DRegister(in=outD, load=DRegSel, out=DRegOut);
+
+    ALU(x=DRegOut, y=AMOut, zx=instruction[11], nx=instruction[10], zy=instruction[9],
+         ny=instruction[8], f=instruction[7], no=instruction[6], out=outA, out=outD, out=outM,
+         ng=Neg, zr=Zero);
+
+    // Write to Memory? Only if OpCode == 1 and instruction[3] == 1
+    And(a=MDestReg, b=OpCode, out=writeM);
+
+    // Program Counter
+
+    Not(in=Neg, out=NotNeg);
+    Not(in=Zero, out=NotZero);
+
+    // Jump Logic
+    // JGT
+    And(a=NotNeg, b=NotZero, out=NotNegAndNotZero);
+    And(a=NotNegAndNotZero, b=JGTin, out=JGT);
+
+    // JEQ
+    And(a=NotNeg, b=Zero, out=xjeq);
+    And(a=xjeq, b=JEQin, out=JEQ);
+
+    // JLT = JLTin ^ Neg ^ NotZero
+    And(a=Neg, b=NotZero, out=jlta);
+    And(a=jlta, b=JLTin, out=JLT);
+
+    Or(a=JGT, b=JEQ, out=ja);
+    Or(a=ja, b=JLT, out=jb);
+    And(a=jb, b=COpCode, out=Jump);  // don't set PC if it is an @addr instruction!
+
+    Or(a=true, b=true, out=incrPC);
+
+    PC(in=PCIn, load=Jump, inc=incrPC, reset=reset, out[0..14]=pc);
+
+}
