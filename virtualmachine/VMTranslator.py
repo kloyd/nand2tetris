@@ -1,6 +1,7 @@
 import sys
 import re
 
+
 def segment_code(segment):
     return {
         'local' : 'LCL',
@@ -10,6 +11,19 @@ def segment_code(segment):
         'temp' : 'TEMP'
     }[segment]
 
+
+def op_code(operation):
+    return {
+    'add' : '+',
+    'sub' : '-', 
+    'neg' : '-',
+    'not' : '!',
+    'eq' : 'EQ', 
+    'gt' : 'GT', 
+    'lt' : 'LT', 
+    'and' : '&', 
+    'or' : '|'
+    }[operation]
 
 def write_asm(line):
     outputfile.write(line)
@@ -136,15 +150,17 @@ def pop_pointer(location):
     write_asm("M=D")
 
 
-def binary_op(op):
-    write_asm("// binary operation " + op)
+def math_op(op):
+    opCode = op_code(op)
+    write_asm("// math operation " + op)
     write_asm("@SP")
     write_asm("A=M")
     write_asm("A=A-1")
     write_asm("A=A-1")
     write_asm("D=M")  
-    write_asm("A=A+1")      
-    write_asm("D=D" + op + "M")     
+    write_asm("A=A+1") 
+    write_asm("// " + op)     
+    write_asm("D=D" + opCode + "M")     
     write_asm("A=A-1")     
     write_asm("M=D")       
     write_asm("A=A+1")
@@ -152,9 +168,58 @@ def binary_op(op):
     write_asm("@SP")
     write_asm("M=D")
 
+def comparison_op(op):
+    global compareCounter
+    compareCode = op_code(op)
+    jumpTrueCode = compareCode + "_" + str(compareCounter)
+    jumpEndCode = compareCode + "END" + str(compareCounter)
+    write_asm("// comparison " + op)
+    write_asm("// eq using stack")
+    write_asm("@SP")
+    write_asm("A=M")
+    write_asm("A=A-1")
+    write_asm("A=A-1")
+    write_asm("D=M    ")  
+    write_asm("A=A+1    ")  
+    write_asm("D=D-M")
+    write_asm("@" + jumpTrueCode)
+    write_asm("D;J" + compareCode)
+    write_asm("@0")
+    write_asm("D=A")
+    write_asm("@" + jumpEndCode)
+    write_asm("0;JMP")
+    write_asm("(" + jumpTrueCode + ")")
+    write_asm("// set D to -1")
+    write_asm("D=0")
+    write_asm("D=D-1")
+    write_asm("(" + jumpEndCode + ")")
+    write_asm("// D contains true (-1) or false (0) at this point.")
+    write_asm("// decrement sp twice")
+    write_asm("@SP        // *SP = D")
+    write_asm("M=M-1")
+    write_asm("M=M-1")
+    write_asm("A=M")
+    write_asm("M=D")
+    write_asm("@SP        // SP++")
+    write_asm("M=M+1")
+    compareCounter = compareCounter + 1
+
 
 def unary_op(op):
-    write_asm("// unary operation" + op)
+    write_asm("// unary operation " + op)
+    unaryOp = op_code(op)
+    write_asm("@SP")
+    write_asm("A=M")
+    write_asm("A=A-1")
+    write_asm("D=M")  
+    write_asm("// " + op)     
+    write_asm("D=" + unaryOp + "D")     
+    #write_asm("A=A-1")     
+    write_asm("M=D")       
+    write_asm("A=A+1")
+    write_asm("D=A")
+    write_asm("@SP")
+    write_asm("M=D")
 
 
 def ParseLine(line):
@@ -196,8 +261,10 @@ def Compile(op, seg, loc, source_line):
             push_static(loc)
         if seg == 'pointer':
             push_pointer(loc)
-    elif op in ['add', 'sub', 'eq', 'gt', 'lt', 'and', 'or']:
-        binary_op(op)
+    elif op in ['add', 'sub', 'and', 'or']:
+        math_op(op)
+    elif op in ['eq', 'gt', 'lt']:
+        comparison_op(op)
     elif op in ['not', 'neg']:
         unary_op(op)
     elif op == 'none':
@@ -216,6 +283,7 @@ modulename = sourcefilename.split('.')[0]
 outputfilename = modulename + ".asm"
 print("Parsing " + sourcefilename + " to " + outputfilename + ", with module " + modulename)
 
+compareCounter = 1
 
 inputfile = open(sourcefilename, "r")
 outputfile = open(outputfilename, "w")

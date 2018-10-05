@@ -201,14 +201,15 @@ M=D
 // SP++
 @SP
 M=M+1
-// binary operation add
+// math operation add
 @SP
 A=M
 A=A-1
 A=A-1
 D=M
 A=A+1
-D=DaddM
+// add
+D=D+M
 A=A-1
 M=D
 A=A+1
@@ -233,14 +234,15 @@ M=D
 // SP++
 @SP
 M=M+1
-// binary operation sub
+// math operation sub
 @SP
 A=M
 A=A-1
 A=A-1
 D=M
 A=A+1
-D=DsubM
+// sub
+D=D-M
 A=A-1
 M=D
 A=A+1
@@ -283,28 +285,30 @@ M=D
 // SP++
 @SP
 M=M+1
-// binary operation add
+// math operation add
 @SP
 A=M
 A=A-1
 A=A-1
 D=M
 A=A+1
-D=DaddM
+// add
+D=D+M
 A=A-1
 M=D
 A=A+1
 D=A
 @SP
 M=D
-// binary operation sub
+// math operation sub
 @SP
 A=M
 A=A-1
 A=A-1
 D=M
 A=A+1
-D=DsubM
+// sub
+D=D-M
 A=A-1
 M=D
 A=A+1
@@ -329,14 +333,15 @@ M=D
 // SP++
 @SP
 M=M+1
-// binary operation add
+// math operation add
 @SP
 A=M
 A=A-1
 A=A-1
 D=M
 A=A+1
-D=DaddM
+// add
+D=D+M
 A=A-1
 M=D
 A=A+1

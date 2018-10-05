@@ -13,6 +13,7 @@ D=A
 @EQEND1
 0;JMP
 (EQ1)
+D=0
 D=D-1
 (EQEND1)
            // D contains true (-1) or false (0) at this point.
