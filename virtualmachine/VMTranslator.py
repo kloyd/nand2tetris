@@ -51,9 +51,11 @@ def push_standard(segment,location):
     write_asm("// addr = " + seg_code + " + " + location)
     if segment == 'temp':
         write_asm("@5")
+        write_asm("D=A")
     else:
         write_asm("@" + seg_code)
-    write_asm("D=M")
+        write_asm("D=M")
+
     write_asm("@" + location)
     write_asm("D=D+A")
     write_asm("@addr")
@@ -104,10 +106,12 @@ def pop_standard(segment, location):
     # addr = segmentPointer + location
     if segment == 'temp':
         write_asm("@5")
+        write_asm("D=A")
     else:
         write_asm("@" + seg_code)
+        write_asm ("D=M")
 
-    write_asm ("D=M")
+    
     write_asm ("@" + location)
     write_asm ("D=D+A")
     write_asm ("@addr")
@@ -279,8 +283,10 @@ if len(sys.argv) != 2:
     exit(-1)
 
 sourcefilename = sys.argv[1]
-modulename = sourcefilename.split('.')[0]
-outputfilename = modulename + ".asm"
+module_re = re.search('(\w+)\.vm$', sourcefilename)
+modulename = module_re.group(1)
+
+outputfilename = sourcefilename.split('.')[0] +  ".asm"
 print("Parsing " + sourcefilename + " to " + outputfilename + ", with module " + modulename)
 
 compareCounter = 1
