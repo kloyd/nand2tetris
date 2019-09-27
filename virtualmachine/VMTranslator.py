@@ -43,6 +43,7 @@ def push_constant(i):
     write_asm("M=D")
     write_asm("@SP")
     write_asm("M=M+1")
+    write_asm("// end push constant")
 
 
 def push_standard(segment,location):
@@ -70,6 +71,7 @@ def push_standard(segment,location):
     write_asm("// SP++")
     write_asm("@SP")
     write_asm("M=M+1")
+    write_asm("// end push " + segment)
 
 
 def push_pointer(location):
@@ -86,6 +88,7 @@ def push_pointer(location):
     write_asm("M=D")
     write_asm("@SP")
     write_asm("M=M+1")
+    write_asm("// end push pointer")
 
 
 def push_static(location):
@@ -225,18 +228,50 @@ def unary_op(op):
     write_asm("@SP")
     write_asm("M=D")
 
+def write_label(label):
+    write_asm("(" + label + ")")
+
+def write_if_goto(label):
+    write_asm("// if-goto " + label)
+    write_asm("@SP")
+    write_asm("M=M-1")
+    write_asm("@SP")
+    write_asm("A=M")
+    write_asm("D=M")
+    write_asm("@" + label)
+    write_asm("D;JNE")
+
+def write_goto(label):
+    write_asm("// goto " + label)
+    write_asm("@" + label)
+    write_asm("0;JMP")
+
 
 def ParseLine(line):
     op = None
     seg = None
     loc = None
-    comment_line = re.search('\/\/', line)
+    comment_line = re.search('^\/\/', line)
     if comment_line is None:
-        m = re.search('(\w+)(\s*(\w+)\s*(\d+))?', line)
+        m = re.search('^(\w+)(\s*(\w+)\s*(\d+))?', line)
         if m is not None:
             op = m.group(1)
-            seg = m.group(3)
+            if op == 'label':
+                n = re.search('(\w+)\s*(\w+)',line)
+                seg = n.group(2)
+            elif op == 'if':
+                n = re.search('^(if-goto)\s*(\w+)',line)
+                seg = n.group(2)
+            elif op == 'goto':
+                n = re.search('^(goto)\s*(\w+)',line)
+                seg = n.group(2)
+            else:
+                seg = m.group(3)
             loc = m.group(4)
+ #       else:
+ #           write_comment("skipping line: " + line)
+ #   else:
+ #       write_comment("comment line: " + line)
     return op, seg, loc
 
 
@@ -273,8 +308,14 @@ def Compile(op, seg, loc, source_line):
         unary_op(op)
     elif op == 'none':
         write_comment(source_line)
+    elif op == 'label':
+        write_label(seg)
+    elif op == 'if':
+        write_if_goto(seg)
+    elif op == 'goto':
+        write_goto(seg)
     else:
-        print("Operation " + op + ", Segment " + seg + " not implemented.")
+        print("Operation " + op + ", Segment " + seg + ", loc " + loc + " not implemented.")
 
 
 ### Main program.
