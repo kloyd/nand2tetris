@@ -34,7 +34,8 @@ def write_asm(output_file, line):
 
 
 def write_comment(output_file, line):
-    output_file.write(line)
+    # output_file.write(line)
+    print(line)
 
 
 def push_constant(output_file, i):
@@ -52,7 +53,7 @@ def push_constant(output_file, i):
 def push_standard(output_file, segment, location):
     write_asm(output_file, "// push " + segment + " " + location)
     seg_code = segment_code(segment)
-    write_asm(output_file, "// addr = " + seg_code + " + " + location)
+    # write_asm(output_file, "// address = " + seg_code + " + " + location)
     if segment == 'temp':
         write_asm(output_file, "@5")
         write_asm(output_file, "D=A")
@@ -64,14 +65,14 @@ def push_standard(output_file, segment, location):
     write_asm(output_file, "D=D+A")
     write_asm(output_file, "@addr")
     write_asm(output_file, "M=D")
-    write_asm(output_file, "// *SP = *addr")
-    write_asm(output_file, "// A already at @addr")
+    # write_asm(output_file, "// *SP = *addr")
+    # write_asm(output_file, "// A already at @addr")
     write_asm(output_file, "A=M")
     write_asm(output_file, "D=M")
     write_asm(output_file, "@SP")
     write_asm(output_file, "A=M")
     write_asm(output_file, "M=D")
-    write_asm(output_file, "// SP++")
+    # write_asm(output_file, "// SP++")
     write_asm(output_file, "@SP")
     write_asm(output_file, "M=M+1")
     write_asm(output_file, "// end push " + segment)
@@ -94,14 +95,14 @@ def push_pointer(output_file, location):
     write_asm(output_file, "// end push pointer")
 
 
-def push_static(output_file, modulename, location):
+def push_static(output_file, module_name, location):
     write_asm(output_file, "// push static " + location)
-    write_asm(output_file, "@" + modulename + "." + location)
+    write_asm(output_file, "@" + module_name + "." + location)
     write_asm(output_file, "D=M")
     write_asm(output_file, "@SP")
     write_asm(output_file, "A=M")
     write_asm(output_file, "M=D")
-    write_asm(output_file, "// SP++")
+    # write_asm(output_file, "// SP++")
     write_asm(output_file, "@SP")
     write_asm(output_file, "M=M+1")
 
@@ -109,7 +110,7 @@ def push_static(output_file, modulename, location):
 def pop_standard(output_file, segment, location):
     write_asm(output_file, "// pop " + segment + " " + location)
     seg_code = segment_code(segment)
-    # addr = segmentPointer + location
+    # address = segmentPointer + location
     if segment == 'temp':
         write_asm(output_file, "@5")
         write_asm(output_file, "D=A")
@@ -119,7 +120,7 @@ def pop_standard(output_file, segment, location):
 
     write_asm(output_file, "@" + location)
     write_asm(output_file, "D=D+A")
-    write_asm(output_file, "@addr")
+    write_asm(output_file, "@address")
     write_asm(output_file, "M=D")
     # SP--
     write_asm(output_file, "@SP")
@@ -128,7 +129,7 @@ def pop_standard(output_file, segment, location):
     write_asm(output_file, "@SP")
     write_asm(output_file, "A=M")
     write_asm(output_file, "D=M")
-    write_asm(output_file, "@addr")
+    write_asm(output_file, "@address")
     write_asm(output_file, "A=M")
     write_asm(output_file, "M=D")
 
@@ -169,7 +170,7 @@ def math_op(output_file, op):
     write_asm(output_file, "A=A-1")
     write_asm(output_file, "D=M")
     write_asm(output_file, "A=A+1")
-    write_asm(output_file, "// " + op)
+    # write_asm(output_file, "// " + op)
     write_asm(output_file, "D=D" + opCode + "M")
     write_asm(output_file, "A=A-1")
     write_asm(output_file, "M=D")
@@ -254,11 +255,24 @@ def write_goto(output_file, label):
     write_asm(output_file, "0;JMP")
 
 
-def ParseLine(line):
+def write_function(output_file, module, name, arg_count):
+    write_asm(output_file, "// function: " + name + " " + arg_count)
+
+
+def write_call(output_file, module, name):
+    write_asm(output_file, "// call " + name)
+    write_asm(output_file, "// end call")
+
+
+def write_return(output_file, module, name):
+    write_asm(output_file, "// return ")
+
+
+def parse_line(line):
     op = None
     seg = None
     loc = None
-    comment_line = re.search('^\/\/', line)
+    comment_line = re.search('^//', line)
     if comment_line is None:
         m = re.search('^(\w+)(\s*(\w+)\s*(\d+))?', line)
         if m is not None:
@@ -272,9 +286,20 @@ def ParseLine(line):
             elif op == 'goto':
                 n = re.search('^(goto)\s*(\w+)', line)
                 seg = n.group(2)
+            elif op == "function":
+                n = re.search('^(function)\s+([\w.]+)\s+(\d+)', line)
+                seg = n.group(2)
+                loc = n.group(3)
+            elif op == "call":
+                n = re.search('^(call)\s+([\w.]+)', line)
+                seg = n.group(2)
+                loc = ""
+            elif op == 'return':
+                seg = ""
+                loc = ""
             else:
                 seg = m.group(3)
-            loc = m.group(4)
+                loc = m.group(4)
     #       else:
     #           write_comment("skipping line: " + line)
     #   else:
@@ -282,7 +307,7 @@ def ParseLine(line):
     return op, seg, loc
 
 
-def Compile(outputfile, module, op, seg, loc, source_line):
+def compile_line(outputfile, module, op, seg, loc, source_line):
     if op is None:
         op = "none"
     if seg is None:
@@ -321,6 +346,12 @@ def Compile(outputfile, module, op, seg, loc, source_line):
         write_if_goto(outputfile, seg)
     elif op == 'goto':
         write_goto(outputfile, seg)
+    elif op == 'function':
+        write_function(outputfile, module, seg, loc)
+    elif op == 'call':
+        write_call(outputfile, module, seg)
+    elif op == 'return':
+        write_return(outputfile, "", "")
     else:
         print("Operation " + op + ", Segment " + seg + ", loc " + loc + " not implemented.")
 
@@ -330,9 +361,9 @@ def parseAndCompileOneFile(outputfile, sourcefilename, modulename):
     print("Parsing " + sourcefilename + " to " + outputfilename + ", with module " + modulename)
     inputfile = open(sourcefilename, "r")
     for line in inputfile:
-        operation = ParseLine(line)
+        operation = parse_line(line)
         if operation is not None:
-            Compile(outputfile, modulename, operation[0], operation[1], operation[2], line)
+            compile_line(outputfile, modulename, operation[0], operation[1], operation[2], line)
 
     inputfile.close()
 
