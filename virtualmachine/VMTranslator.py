@@ -3,6 +3,25 @@ import re
 import glob
 import os
 
+class Parser:
+    def __init__(self):
+        print('init') # constructor
+
+    def hasMoreCommands(self):
+        print('hasMoreCommands')
+
+    def advance(self):
+        print('advance')
+
+    def commandType(self):
+        print('commandType')
+
+    def arg1(self):
+        print('arg1')
+
+    def arg2(self):
+        print('arg2')
+
 
 def segment_code(segment):
     return {
@@ -34,8 +53,7 @@ def write_asm(output_file, line):
 
 
 def write_comment(output_file, line):
-    # output_file.write(line)
-    print(line)
+    output_file.write(line)
 
 
 def push_constant(output_file, i):
@@ -255,13 +273,72 @@ def write_goto(output_file, label):
     write_asm(output_file, "0;JMP")
 
 
+def write_init(output_file):
+    write_asm("// Initialization Code.")
+
+
 def write_function(output_file, module, name, arg_count):
+    args = int(arg_count)
     write_asm(output_file, "// function: " + name + " " + arg_count)
+    write_asm(output_file, "(" + name + ")")
+    n = 0
+    # push number of locals required clear to zero.
+    while n < args:
+        push_constant(output_file, '0')
+        n = n + 1
 
 
+# call module n
 def write_call(output_file, module, name):
     write_asm(output_file, "// call " + name)
+    # push return-address
+    return_address = "RET-" + module
+    # push return-address
+    write_asm(output_file, "@" + return_address)
+    write_asm(output_file, "D=A")
+    # standard stack push of contents of D register.
+    push_d_register(output_file)
+
+    # push LCL
+    write_asm(output_file, "@LCL")
+    write_asm(output_file, "D=M")
+    # standard stack push of contents of D register.
+    push_d_register(output_file)
+    # push ARG
+    write_asm(output_file, "@ARG")
+    write_asm(output_file, "D=M")
+    push_d_register(output_file)
+    # push THIS
+    write_asm(output_file, "@THIS")
+    write_asm(output_file, "D=M")
+    push_d_register(output_file)
+    # push THAT
+    write_asm(output_file, "@THAT")
+    write_asm(output_file, "D=M")
+    push_d_register(output_file)
+    # ARG = SP-n-5
+    write_asm(output_file, "@SP")
+    write_asm(output_file, "D=A")  # d = sp
+    # d = d - 5
+    write_asm(output_file, "@5")
+    write_asm(output_file, "D=D-A")
+    # d = d - n
+    write_asm(output_file, "@2") # arg number!!!!
+    write_asm(output_file, "D=D-A")
+    # store D into ARG
+    # LCL = SP
+    # goto f (f = function name)
+    # write the return-address label
+    write_asm(output_file, "(" + return_address + ")")
     write_asm(output_file, "// end call")
+
+
+def push_d_register(output_file):
+    write_asm(output_file, "@SP")
+    write_asm(output_file, "A=M")
+    write_asm(output_file, "M=D")
+    write_asm(output_file, "@SP")
+    write_asm(output_file, "M=M+1")
 
 
 def write_return(output_file, module, name):
@@ -339,7 +416,7 @@ def compile_line(outputfile, module, op, seg, loc, source_line):
     elif op in ['not', 'neg']:
         unary_op(outputfile, op)
     elif op == 'none':
-        write_comment(outputfile, source_line)
+       sys.stdout.write(source_line)
     elif op == 'label':
         write_label(outputfile, seg)
     elif op == 'if':
