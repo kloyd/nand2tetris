@@ -274,7 +274,31 @@ def write_goto(output_file, label):
 
 
 def write_init(output_file):
-    write_asm("// Initialization Code.")
+    write_asm(output_file, "// Initialization Code.")
+    write_asm(output_file, "// SP = 256")
+    write_asm(output_file, "@256")
+    write_asm(output_file, "D=A")
+    write_asm(output_file, "@SP")
+    write_asm(output_file, "M=D")
+    ### THIS and THAT
+    push_constant(output_file, "3000")
+    pop_pointer(output_file, "0")
+    push_constant(output_file, "4000")
+    pop_pointer(output_file, "1")
+    # init others
+    #write_asm(output_file, "@256")
+    #write_asm(output_file, "D=A")
+    #write_asm(output_file, "@ARG")
+    #write_asm(output_file, "M=D")
+    #
+    # write_asm(output_file, "@256")
+    # write_asm(output_file, "D=A")
+    # write_asm(output_file, "@LCL")
+    # write_asm(output_file, "M=D")
+
+    # call Sys.init()
+    write_asm(output_file, "@Sys.init")
+    write_asm(output_file, "0;JMP")
 
 
 def write_function(output_file, module, name, arg_count):
@@ -289,22 +313,25 @@ def write_function(output_file, module, name, arg_count):
 
 
 # call module n
-def write_call(output_file, module, name):
+def write_call(output_file, module, name, location):
+    global returnCounter
     write_asm(output_file, "// call " + name)
-    # push return-address
-    return_address = "RET-" + module
+    write_asm(output_file, "// push return address")
+    return_address = "RET-" + module + str(returnCounter)
+    returnCounter = returnCounter + 1
     # push return-address
     write_asm(output_file, "@" + return_address)
     write_asm(output_file, "D=A")
     # standard stack push of contents of D register.
     push_d_register(output_file)
 
-    # push LCL
+    write_asm(output_file, "// push LCL")
+
     write_asm(output_file, "@LCL")
     write_asm(output_file, "D=M")
     # standard stack push of contents of D register.
     push_d_register(output_file)
-    # push ARG
+    write_asm(output_file, "// push ARG")
     write_asm(output_file, "@ARG")
     write_asm(output_file, "D=M")
     push_d_register(output_file)
@@ -316,18 +343,27 @@ def write_call(output_file, module, name):
     write_asm(output_file, "@THAT")
     write_asm(output_file, "D=M")
     push_d_register(output_file)
+    write_asm(output_file, "// ARG = SP - n - 5, n =" + location)
     # ARG = SP-n-5
     write_asm(output_file, "@SP")
-    write_asm(output_file, "D=A")  # d = sp
+    write_asm(output_file, "D=M")  # d = sp
     # d = d - 5
     write_asm(output_file, "@5")
     write_asm(output_file, "D=D-A")
     # d = d - n
-    write_asm(output_file, "@2") # arg number!!!!
+    write_asm(output_file, "@" + location) # arg number!!!!
     write_asm(output_file, "D=D-A")
     # store D into ARG
-    # LCL = SP
+    write_asm(output_file, "@ARG")
+    write_asm(output_file, "M=D")
+    write_asm(output_file, "// LCL = SP ")
+    write_asm(output_file, "@SP")
+    write_asm(output_file, "D=M")
+    write_asm(output_file, "@LCL")
+    write_asm(output_file, "M=D")
     # goto f (f = function name)
+    write_asm(output_file, "@" + name)
+    write_asm(output_file, "0;JMP")
     # write the return-address label
     write_asm(output_file, "(" + return_address + ")")
     write_asm(output_file, "// end call")
@@ -368,9 +404,9 @@ def parse_line(line):
                 seg = n.group(2)
                 loc = n.group(3)
             elif op == "call":
-                n = re.search('^(call)\s+([\w.]+)', line)
+                n = re.search('^(call)\s+([\w.]+)\s+(\d+)', line)
                 seg = n.group(2)
-                loc = ""
+                loc = n.group(3)
             elif op == 'return':
                 seg = ""
                 loc = ""
@@ -426,7 +462,7 @@ def compile_line(outputfile, module, op, seg, loc, source_line):
     elif op == 'function':
         write_function(outputfile, module, seg, loc)
     elif op == 'call':
-        write_call(outputfile, module, seg)
+        write_call(outputfile, module, seg, loc)
     elif op == 'return':
         write_return(outputfile, "", "")
     else:
@@ -450,6 +486,7 @@ def parseAndCompileFile(source_file):
     modulename = module_re.group(1)
     outputfilename = source_file.split('.')[0] + ".asm"
     outputfile = open(outputfilename, "w")
+    write_init(outputfile)
     parseAndCompileOneFile(outputfile, source_file, modulename)
     outputfile.close()
 
@@ -460,6 +497,7 @@ def parseAndCompileDir(source_dir):
     os.chdir(source_dir)
     print("directory compile: " + outputfilename)
     outputfile = open(outputfilename, "w")
+    write_init(outputfile)
     for file in glob.glob("*.vm"):
         module_re = re.search('(\w+)\.vm$', file)
         modulename = module_re.group(1)
@@ -474,6 +512,7 @@ if len(sys.argv) != 2:
     exit(-1)
 
 compareCounter = 1
+returnCounter = 1
 
 sourcefilename = sys.argv[1]
 outputfilename = sourcefilename.split('.')[0] + ".asm"
