@@ -368,6 +368,25 @@ def push_d_register(output_file):
 
 def write_return(output_file, module, name):
     write_asm(output_file, "// return ")
+    # FRAME = LCL
+    write_asm(output_file, "@LCL")
+    write_asm(output_file, "D=M")
+    write_asm(output_file, "@R13")
+    write_asm(output_file, "M=D")
+    # RET = *(FRAME-5)
+    write_asm(output_file, "@5")
+    write_asm(output_file, "D=D-A")
+    write_asm(output_file, "A=D")
+    write_asm(output_file, "D=M")
+    write_asm(output_file, "@R15")
+    write_asm(output_file, "M=D")
+    # *ARG = pop()
+    # SP = ARG + 1
+    # THAT = *(FRAME - 1)
+    # THIS = *(FRAME - 2)
+    # ARG = *(FRAME - 3)
+    # LCL = *(FRAME - 4)
+    # goto RET
 
 
 def parse_line(line):
@@ -475,7 +494,6 @@ def parseAndCompileFile(source_file):
     modulename = module_re.group(1)
     outputfilename = source_file.split('.')[0] + ".asm"
     outputfile = open(outputfilename, "w")
-    write_init(outputfile)
     parseAndCompileOneFile(outputfile, source_file, modulename)
     outputfile.close()
 
@@ -486,6 +504,7 @@ def parseAndCompileDir(source_dir):
     os.chdir(source_dir)
     print("directory compile: " + outputfilename)
     outputfile = open(outputfilename, "w")
+    # Only provide initialization code on directory compiles.
     write_init(outputfile)
     for file in glob.glob("*.vm"):
         module_re = re.search('(\w+)\.vm$', file)
