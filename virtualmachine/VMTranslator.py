@@ -274,29 +274,18 @@ def write_goto(output_file, label):
 
 
 def write_init(output_file):
+    # according to the book.
+    # SP=256        // Init stack pointer to 0x0100
+    # call Sys.init // start entry point.
     write_asm(output_file, "// Initialization Code.")
     write_asm(output_file, "// SP = 256")
     write_asm(output_file, "@256")
     write_asm(output_file, "D=A")
     write_asm(output_file, "@SP")
     write_asm(output_file, "M=D")
-    ### THIS and THAT
-    push_constant(output_file, "3000")
-    pop_pointer(output_file, "0")
-    push_constant(output_file, "4000")
-    pop_pointer(output_file, "1")
-    # init others
-    #write_asm(output_file, "@256")
-    #write_asm(output_file, "D=A")
-    #write_asm(output_file, "@ARG")
-    #write_asm(output_file, "M=D")
-    #
-    # write_asm(output_file, "@256")
-    # write_asm(output_file, "D=A")
-    # write_asm(output_file, "@LCL")
-    # write_asm(output_file, "M=D")
 
     # call Sys.init()
+    write_asm(output_file, "// Call Sys.init()")
     write_asm(output_file, "@Sys.init")
     write_asm(output_file, "0;JMP")
 
