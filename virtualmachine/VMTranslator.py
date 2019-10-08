@@ -286,8 +286,7 @@ def write_init(output_file):
 
     # call Sys.init()
     write_asm(output_file, "// Call Sys.init()")
-    write_asm(output_file, "@Sys.init")
-    write_asm(output_file, "0;JMP")
+    write_call(output_file, "Sys", "Sys.init", "0")
 
 
 def write_function(output_file, module, name, arg_count):
@@ -368,25 +367,50 @@ def push_d_register(output_file):
 
 def write_return(output_file, module, name):
     write_asm(output_file, "// return ")
-    # FRAME = LCL
+    # FRAME = R13, RET = R15
+    write_asm(output_file, "// FRAME = LCL")
     write_asm(output_file, "@LCL")
     write_asm(output_file, "D=M")
     write_asm(output_file, "@R13")
     write_asm(output_file, "M=D")
-    # RET = *(FRAME-5)
+    write_asm(output_file, "// RET = *(FRAME-5)")
     write_asm(output_file, "@5")
     write_asm(output_file, "D=D-A")
     write_asm(output_file, "A=D")
     write_asm(output_file, "D=M")
     write_asm(output_file, "@R15")
     write_asm(output_file, "M=D")
-    # *ARG = pop()
-    # SP = ARG + 1
-    # THAT = *(FRAME - 1)
-    # THIS = *(FRAME - 2)
-    # ARG = *(FRAME - 3)
-    # LCL = *(FRAME - 4)
-    # goto RET
+    write_asm(output_file, "// # *ARG = pop()")
+    pop_standard(output_file, "argument", "0")
+    write_asm(output_file, "// SP = ARG + 1")
+    write_asm(output_file, "@ARG")
+    write_asm(output_file, "D=M")
+    write_asm(output_file, "D=D+1")
+    write_asm(output_file, "@SP")
+    write_asm(output_file, "M=D")
+    write_asm(output_file, "// THAT = *(FRAME - 1)")
+    get_frame(output_file, "THAT", "1")
+    write_asm(output_file, "// THIS = *(FRAME - 2)")
+    get_frame(output_file, "THIS", "2")
+    write_asm(output_file, "// ARG = *(FRAME - 3)")
+    get_frame(output_file, "ARG", "3")
+    write_asm(output_file, "// LCL = *(FRAME - 4)")
+    get_frame(output_file, "LCL", "4")
+    write_asm(output_file, "// goto RET")
+    write_asm(output_file, "@R15")
+    write_asm(output_file, "A=M")
+    write_asm(output_file, "0;JMP")
+
+
+def get_frame(output_file, register, offset):
+    write_asm(output_file, "@R13")
+    write_asm(output_file, "D=M")
+    write_asm(output_file, "@" + offset)
+    write_asm(output_file, "D=D-A")   # D = address
+    write_asm(output_file, "A=D") # make memory point to D address
+    write_asm(output_file, "D=M")
+    write_asm(output_file, "@" + register) # get the register and bam.
+    write_asm(output_file, "M=D")
 
 
 def parse_line(line):
