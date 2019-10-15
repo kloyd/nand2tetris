@@ -1,0 +1,11 @@
+function Main.main 1
+call GasCrunch.new 0
+pop local 0
+push local 0
+call GasCrunch.run 1
+pop temp 0
+push local 0
+call GasCrunch.dispose 1
+pop temp 0
+push constant 0
+return

@@ -1,0 +1,104 @@
+// GasCrunch
+
+class GasCrunch {
+	
+	field int numberGasCans;
+
+	constructor GasCrunch new() {
+		let numberGasCans = 18;
+	    return this;
+	}
+
+	method void run() {
+		// run the game
+
+        do Output.moveCursor(0,0);
+        do Output.printString("Remove gas cans without leaving one.");
+        do Output.println();
+        while (numberGasCans > 1) {
+
+        	do playerMove();
+        	if (checkForWin()) {
+        		do Output.println();
+        		do Output.printString("You win!");
+        		return;
+        	}
+        	do computerMove();
+        	if (checkForWin()) {
+        		do Output.println();
+        		do Output.printString("I win!");
+        	}
+        }
+		return;
+	}
+
+	method void playerMove() {
+		var int playerChoice;
+    	do Output.moveCursor(10,0);
+		let playerChoice = Keyboard.readInt("How many to remove? (1,2, or 3)");
+		let numberGasCans = numberGasCans - playerChoice;
+		do showNumberCansLeft();
+		
+		return;
+	}
+
+	method void computerMove() {
+		var int computerChoice;
+		let computerChoice = 0;
+		if (checkForWin()) {
+			// computer is stuck with it.
+			return;
+		}
+		// Computer algorithm for picking the right number of cans to remove.
+		if (numberGasCans > 16) {
+			let computerChoice = 1;
+		} 
+
+		if (numberGasCans = 13) {
+			let computerChoice = 1;
+		}
+
+		if (numberGasCans = 9) {
+			let computerChoice = 1;
+		}
+
+		if (numberGasCans = 5) {
+		    let computerChoice = 1;
+		}
+	
+		if (computerChoice = 0) {
+			// K = N -1 - INT((N -1)/4) *4
+			let computerChoice = numberGasCans - 1 - (((numberGasCans - 1) / 4) * 4);
+		}
+
+		do Output.moveCursor(12,0);
+		do Output.printString("I choose ");
+		do Output.printInt(computerChoice);
+		do Output.printString(" cans.");
+		do Output.println();
+		let numberGasCans = numberGasCans - computerChoice;
+		do showNumberCansLeft();
+		return;
+	}
+
+	method boolean checkForWin() {
+		if (numberGasCans = 1) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	method void showNumberCansLeft() {
+        do Output.printString("There are now ");
+        do Output.printInt(numberGasCans);
+        do Output.printString(" cans remaining.");
+		return;	
+	}
+
+	method void dispose() {
+		// clean up when finished
+
+		return;
+	}
+}

@@ -1,0 +1,12 @@
+// Main
+
+class Main {
+	
+	function void main() {
+		var GasCrunch game;
+        let game = GasCrunch.new();
+        do game.run();
+        do game.dispose();
+        return;
+	}
+}
