@@ -1,31 +1,70 @@
-// GasCrunch
+// GasCrunch Game
 
 class GasCrunch {
 	
 	field int numberGasCans;
+	field Array gasCans;
+	field int canCountGone;
 
 	constructor GasCrunch new() {
 		let numberGasCans = 18;
+		let gasCans = Array.new(numberGasCans);
 	    return this;
+	}
+
+	method void init() {
+		// set up initial gascans
+		var GasCan gasCan;
+		var int i, x, y;
+		let i = 0;
+		let x = 0;
+		let y = 0;
+		while (i < numberGasCans) {
+			let gasCans[i] = GasCan.new(x, y, true);
+			let x = x + 1;
+			if (x = 6) {
+				let x = 0;
+				let y = y + 1;
+			}
+			let i = i + 1;
+		}
+
+		do drawCans();
+		return;
+	}
+
+	method void drawCans() {
+		var GasCan gasCan;
+		var int i;
+		let i = 0;
+		while(i < numberGasCans) {
+			let gasCan = gasCans[i];
+			do gasCan.draw();
+			let i = i + 1;
+		}
+		return;
 	}
 
 	method void run() {
 		// run the game
+		let canCountGone = 0;
+		do init();
+		
 
-        do Output.moveCursor(0,0);
+        do Output.moveCursor(15,0);
         do Output.printString("Remove gas cans without leaving one.");
-        do Output.println();
+        //do Output.println();
         while (numberGasCans > 1) {
 
         	do playerMove();
         	if (checkForWin()) {
-        		do Output.println();
-        		do Output.printString("You win!");
+        //		do Output.println();
+       			do Output.printString("You win!");
         		return;
         	}
         	do computerMove();
         	if (checkForWin()) {
-        		do Output.println();
+        //		do Output.println();
         		do Output.printString("I win!");
         	}
         }
@@ -34,9 +73,10 @@ class GasCrunch {
 
 	method void playerMove() {
 		var int playerChoice;
-    	do Output.moveCursor(10,0);
+    	do Output.moveCursor(16,0);
 		let playerChoice = Keyboard.readInt("How many to remove? (1,2, or 3)");
 		let numberGasCans = numberGasCans - playerChoice;
+
 		do showNumberCansLeft();
 		
 		return;
@@ -71,7 +111,7 @@ class GasCrunch {
 			let computerChoice = numberGasCans - 1 - (((numberGasCans - 1) / 4) * 4);
 		}
 
-		do Output.moveCursor(12,0);
+		do Output.moveCursor(17,0);
 		do Output.printString("I choose ");
 		do Output.printInt(computerChoice);
 		do Output.printString(" cans.");
@@ -90,9 +130,19 @@ class GasCrunch {
 	}
 
 	method void showNumberCansLeft() {
-        do Output.printString("There are now ");
-        do Output.printInt(numberGasCans);
-        do Output.printString(" cans remaining.");
+		var int i, limit;
+		var GasCan gasCan;
+		let i = 0;
+		let limit = 18 - numberGasCans;
+		while(i < limit) {
+			let gasCan = gasCans[i];
+			do gasCan.setOn(false);
+			let i = i + 1;
+		}
+		do drawCans();
+        //do Output.printString("There are now ");
+        //do Output.printInt(numberGasCans);
+       // do Output.printString(" cans remaining.");
 		return;	
 	}
 
