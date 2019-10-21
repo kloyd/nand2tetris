@@ -6,22 +6,49 @@ class GasCan {
 	field boolean on;
 
 	constructor GasCan new(int ax, int ay, boolean isOn) {
-		let x = ax;
-		let y = ay;
+		let x = ax * 80;
+		let x = x + 30;
+		let y = ay * 60;
+		let y = y + 5;
 		let on = isOn;
 		return this;
 	}
 
 	method void draw() {
+
 		var int x1, y1, x2, y2;
-		let x1 = x * 80;
-		let y1 = y * 40;
-
-		let x2 = x1 + 40;
-		let y2 = y1 + 30; 
-
 		do Screen.setColor(on);
+
+		// start with a rectangle for the can.
+		let x1 = x;
+		let y1 = y + 5;
+		let x2 = x1 + 40;
+		let y2 = y1 + 40; 
 		do Screen.drawRectangle(x1, y1, x2, y2);
+
+		// a handle
+		let x1 = x + 5;
+		let y1 = y;
+		let x2 = x + 35;
+		let y2 = y + 10;
+		do Screen.drawRectangle(x1, y1, x2, y2);
+
+		// a white bar
+		if (on) {
+			do Screen.setColor(0);
+			let x1 = x + 1;
+			let y1 = y + 20;
+			let x2 = x + 39;
+			let y2 = y + 30;
+			do Screen.drawRectangle(x1, y1, x2, y2);
+
+			// get a space in the handle
+			let x1 = x + 8;
+			let y1 = y + 2;
+			let x2 = x + 32;
+			let y2 = y + 4;
+			do Screen.drawRectangle(x1, y1, x2, y2);
+		}
 
 		return;
 	}

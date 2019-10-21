@@ -1,71 +1,54 @@
-// GasCrunch Game
+// GasCrunch
+// Created October 21 2019
+// By Kelly S. Loyd
+// kelly.loyd@outlook.com
+// For "Nand 2 Tetris Part 2, Project 9"
+
+
+// GasCrunch Game. You win if you force the computer to pick the last can.
+// Beware - the computer strategy is perfect!
+
+// A homage to Beagle Brothers 'Beagle Bag' diskette for Apple ][ computers
+// way back in the dawn of history.
+// See https://en.wikipedia.org/wiki/Beagle_Bag for more details.
+// The player is presented with 3 shelves of 6 cans per shelf.
+// In the original, a random coin flip determined who goes first.
+// We are being nice to the player here, they always go first.
+// If the computer goes first, it's a no-win situation.
+
 
 class GasCrunch {
-	
-	field int numberGasCans;
+	// Hold how many cans maximum (constant)
+	// and the cans remaining.
+	field int gasCansRemaining;
+	field int maximumGasCans;
+	// Use an array of GasCan objects for convenience in drawing.
 	field Array gasCans;
 	field int canCountGone;
 
 	constructor GasCrunch new() {
-		let numberGasCans = 18;
-		let gasCans = Array.new(numberGasCans);
+		let maximumGasCans = 18;
+		let gasCansRemaining = maximumGasCans;
+		let gasCans = Array.new(maximumGasCans);
 	    return this;
 	}
 
-	method void init() {
-		// set up initial gascans
-		var GasCan gasCan;
-		var int i, x, y;
-		let i = 0;
-		let x = 0;
-		let y = 0;
-		while (i < numberGasCans) {
-			let gasCans[i] = GasCan.new(x, y, true);
-			let x = x + 1;
-			if (x = 6) {
-				let x = 0;
-				let y = y + 1;
-			}
-			let i = i + 1;
-		}
-
-		do drawCans();
-		return;
-	}
-
-	method void drawCans() {
-		var GasCan gasCan;
-		var int i;
-		let i = 0;
-		while(i < numberGasCans) {
-			let gasCan = gasCans[i];
-			do gasCan.draw();
-			let i = i + 1;
-		}
-		return;
-	}
-
 	method void run() {
-		// run the game
+		// Game is over when there is one can left.
 		let canCountGone = 0;
 		do init();
-		
-
-        do Output.moveCursor(15,0);
-        do Output.printString("Remove gas cans without leaving one.");
-        //do Output.println();
-        while (numberGasCans > 1) {
-
+		do printInstructions();
+        while (gasCansRemaining > 1) {
         	do playerMove();
         	if (checkForWin()) {
-        //		do Output.println();
-       			do Output.printString("You win!");
+        		do Output.moveCursor(20,0);
+       			do Output.printString("Rats! You WON (#%&@!)! What luck.");
         		return;
         	}
         	do computerMove();
         	if (checkForWin()) {
-        //		do Output.println();
-        		do Output.printString("I win!");
+        		do Output.moveCursor(20,0);
+        		do Output.printString("You get the last can-- You LOSE!");
         	}
         }
 		return;
@@ -73,12 +56,36 @@ class GasCrunch {
 
 	method void playerMove() {
 		var int playerChoice;
-    	do Output.moveCursor(16,0);
-		let playerChoice = Keyboard.readInt("How many to remove? (1,2, or 3)");
-		let numberGasCans = numberGasCans - playerChoice;
-
+		var boolean validChoice;
+		let validChoice = false;
+		while (~validChoice) {
+    		do Output.moveCursor(16,0);
+			let playerChoice = Keyboard.readInt("How many gas cans to remove? (1,2, or 3)");
+			// must be greater than 0
+			if (playerChoice > 0) {
+				// and less than 4
+				if (playerChoice < 4) {
+					let validChoice = true;
+				} else {
+					do printInvalidChoice(validChoice);
+				} 
+			} else {
+				do printInvalidChoice(validChoice);
+			}
+		}
+		let gasCansRemaining = gasCansRemaining - playerChoice;
+		do printInvalidChoice(validChoice);
 		do showNumberCansLeft();
-		
+		return;
+	}
+
+	method void printInvalidChoice(boolean valid) {
+		do Output.moveCursor(17,0);
+		if (valid) {
+			do Output.printString("                                       ");
+		} else {
+			do Output.printString("No way! You've gotta push 1,2, or 3...");
+		}
 		return;
 	}
 
@@ -90,39 +97,46 @@ class GasCrunch {
 			return;
 		}
 		// Computer algorithm for picking the right number of cans to remove.
-		if (numberGasCans > 16) {
+		// Pick one can if greater than 16, or equal to 13, 9, or 5.
+		// if none of those values, compute the number of cans to remove
+		// Based on Beagle Bag from Beagle Brothers GASCRUNCH game.
+		// 
+		if (gasCansRemaining > 16) {
 			let computerChoice = 1;
 		} 
 
-		if (numberGasCans = 13) {
+		if (gasCansRemaining = 13) {
 			let computerChoice = 1;
 		}
 
-		if (numberGasCans = 9) {
+		if (gasCansRemaining = 9) {
 			let computerChoice = 1;
 		}
 
-		if (numberGasCans = 5) {
+		if (gasCansRemaining = 5) {
 		    let computerChoice = 1;
 		}
 	
 		if (computerChoice = 0) {
-			// K = N -1 - INT((N -1)/4) *4
-			let computerChoice = numberGasCans - 1 - (((numberGasCans - 1) / 4) * 4);
+			// From original BASIC Code.
+			// K = N - 1 - INT((N -1)/4) * 4
+			// Where K = Komputer Choice and N = Number of Gas Cans remaining.
+			let computerChoice = gasCansRemaining - 1 - (((gasCansRemaining - 1) / 4) * 4);
 		}
 
 		do Output.moveCursor(17,0);
-		do Output.printString("I choose ");
+		do Output.printString("Hack chooses ");
 		do Output.printInt(computerChoice);
-		do Output.printString(" cans.");
+		do Output.printString(textFromCanNumber(computerChoice));
+		do Output.printString("   ");
 		do Output.println();
-		let numberGasCans = numberGasCans - computerChoice;
+		let gasCansRemaining = gasCansRemaining - computerChoice;
 		do showNumberCansLeft();
 		return;
 	}
 
 	method boolean checkForWin() {
-		if (numberGasCans = 1) {
+		if (gasCansRemaining = 1) {
 			return true;
 		} else {
 			return false;
@@ -133,22 +147,120 @@ class GasCrunch {
 		var int i, limit;
 		var GasCan gasCan;
 		let i = 0;
-		let limit = 18 - numberGasCans;
+		let limit = 18 - gasCansRemaining;
 		while(i < limit) {
 			let gasCan = gasCans[i];
 			do gasCan.setOn(false);
 			let i = i + 1;
 		}
 		do drawCans();
-        //do Output.printString("There are now ");
-        //do Output.printInt(numberGasCans);
-       // do Output.printString(" cans remaining.");
+		do textOfCansRemaining(gasCansRemaining);
 		return;	
+	}
+
+
+	method void init() {
+		// set up initial gascans
+		var GasCan gasCan;
+		var int i, x, y;
+		let i = 0;
+		let x = 0;
+		let y = 0;
+		// Simple grid math. 6 cans will fit across.
+		// Enhancement - to make the cans shrink/grow depending on the total number wanted.
+		while (i < maximumGasCans) {
+			let gasCans[i] = GasCan.new(x, y, true);
+			let x = x + 1;
+			if (x = 6) {
+				let x = 0;
+				let y = y + 1;
+			}
+			let i = i + 1;
+		}
+		// get our gas can pictures and shelves drawn.
+		do drawCans();
+		do drawShelves();
+
+		return;
+	}
+
+	method void drawCans() {
+		// The array makes this simple,
+		// just iterate over each array element 
+		// and ask it to draw itself.
+		var GasCan gasCan;
+		var int i;
+		let i = 0;
+		while(i < maximumGasCans) {
+			let gasCan = gasCans[i];
+			do gasCan.draw();
+			let i = i + 1;
+		}
+		return;
+	}
+
+	method void drawShelves() {
+		var int x1, y1, x2, y2;
+
+		let x1 = 0;
+		let y1 = 51;
+		let x2 = 511;
+		let y2 = y1 + 2;
+		do Screen.setColor(true);
+		do Screen.drawRectangle(x1, y1, x2, y2);
+		let y1 = y1 + 60;
+		let y2 = y2 + 60;
+		do Screen.drawRectangle(x1, y1, x2, y2);
+		let y1 = y1 + 60;
+		let y2 = y2 + 60;
+		do Screen.drawRectangle(x1, y1, x2, y2);
+
+		return;
+
 	}
 
 	method void dispose() {
 		// clean up when finished
+		do Memory.deAlloc(gasCans);
+		return;
+	}
 
+	method void printInstructions() {
+		// show text of game instructions.
+		var int i;
+        do Output.moveCursor(16,0);
+        do Output.printString("Remove 1, 2, or 3 gas cans each turn.");
+        do Output.moveCursor(17,0);
+        do Output.printString("You win if you make the computer take the last can.");
+        do Output.moveCursor(18,0);
+        do Keyboard.readLine("Press <enter> to start.");
+        // Be tidy and erase the instructions before game start.
+        let i = 16;
+        while(i < 19) {
+        	do Output.moveCursor(i,0);
+        	do Output.printString("                                                        ");
+        	let i = i + 1;
+        }
+		return;
+	}
+
+	method String textFromCanNumber(int canNumber) {
+		if (canNumber = 1) {
+			return " can.";
+		} else {
+			return " cans.";
+		}
+	}
+
+	method void textOfCansRemaining(int canNumber) {
+		do Output.moveCursor(19,0);
+		if (canNumber = 1) {
+			do Output.printString("There is 1 can remaining.   ");
+		} else {
+			do Output.printString("There are ");
+			do Output.printInt(canNumber);
+			do Output.printString(" cans remaining."); 
+		}
 		return;
 	}
 }
