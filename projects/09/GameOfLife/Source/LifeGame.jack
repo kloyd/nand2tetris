@@ -1,0 +1,285 @@
+// File name: projects/09/Life/LifeGame.jack
+// This class sets up the lifeGrid (current state), nextGrid (calculated next state), and controls the three modes of the game: Help, Configure, and Play
+
+
+class LifeGame {
+	field LifeGrid lifeGrid, nextGrid;
+	field int size, curX, curY, mode;
+	field boolean display_help, quit;
+
+	constructor LifeGame new(){
+		let size = 8; // Smallest 2^n sized square that can be supported by Hack computer memory
+		let lifeGrid = LifeGrid.new(size);
+		let nextGrid = LifeGrid.new(size);
+
+		let curX = lifeGrid.getWidth()/2; // x location of the selected cell (for configuration)
+		let curY = lifeGrid.getHeight()/2; // y location of the selected cell (for configuration)
+
+		let mode = 0; //help screen
+		let display_help = false;
+		let quit = false;
+
+		return this;
+		}
+
+
+	method void dispose(){
+		do lifeGrid.dispose();
+		do nextGrid.dispose();
+		do Memory.deAlloc(this);
+		return;
+		}
+
+
+	method void run(){
+		/** Runs the game */
+		while (~quit){	
+			while ( (mode=0) & (~quit) ){
+			/** 0. Help mode */
+				do help();
+				}
+
+			while ( (mode=1) & (~quit) ){
+			/** 1. Configure mode */
+				do lifeGrid.selectCell(curX, curY);
+				do configure();
+				}
+
+			while ( (mode=2) & (~quit) ){
+			/** 2. Play mode */
+				do play();
+				}
+			}
+		return;
+		}
+
+
+	method void help(){
+		/** Implements help mode */
+		var int key;
+		let key = 0;
+
+		if (~display_help){
+			do display_help();
+			}
+
+		while (key=0){
+			let key=Keyboard.keyPressed();
+			if ( (key=67) | (key=99) ){
+				//c or C (configure)
+				do lifeGrid.renderGrid();
+				let mode=1;
+				}
+
+			if ( (key=81) | (key=113) ){
+				//q or Q (quit)
+				do lifeGrid.renderGrid();
+				let quit=true;
+				}
+			}
+
+		return;
+		}
+
+
+	method void display_help(){
+		do Screen.clearScreen();
+		do Output.moveCursor(0, 0);
+
+		do Output.printString("Welcome to John Conway's Game of Life");
+		do Output.println();
+
+		do Output.printString("This is a cellular automaton. Set up an initial configuration   and watch it evolve. A live cell next to 2-3 other cells stays alive and dies  otherwise. A dead cell next to 3 live cells comes to life. See https://www.conwaylife.com/ for more.");
+		do Output.println();
+
+		do Output.println();
+		do Output.printString("From any screen:");
+		do Output.println();
+		do Output.printString(" <h> to return to this help screen");
+		do Output.println();
+		do Output.printString(" <q> to quit");
+		do Output.println();
+
+		do Output.println();
+		do Output.printString("From this help screen:");
+		do Output.println();
+		do Output.printString(" <c> to switch to configure mode");
+		do Output.println();
+
+		do Output.println();
+		do Output.printString("In configure mode:");
+		do Output.println();
+		do Output.printString(" <arrow keys> to move the selected (outlined) cell");
+		do Output.println();
+		do Output.printString(" <t> or <space> to toggle between active/black & inactive/white");
+		do Output.println();
+		do Output.printString(" <p> to play");
+		do Output.println();
+
+		do Output.printString("Or choose from the following preconfigured patterns:");
+		do Output.println();
+		do Output.printString("  <1> to set pattern to 'Blinker'");
+		do Output.println();
+		do Output.printString("  <2> to set pattern to 10-cell wide line");
+		do Output.println();
+		do Output.printString("  <3> to set pattern to 'Glider'");
+		do Output.println();
+		do Output.printString("  <4> to set pattern to 'Small Exploder'");
+		do Output.println();
+		do Output.printString("  <5> to set pattern to 'Lightweight Spaceship'");
+		let display_help = true;
+		return;
+		}
+
+
+	method void configure(){
+		/** Implements configure mode */
+		var int key, wait_time;
+
+		let key = 0;
+		let display_help = false;
+		let wait_time = 200; // Prevents a single keystroke from being interpreted as a large number of keystrokes based on keypress duration
+
+		while (key=0){
+			let key=Keyboard.keyPressed();
+
+			if (key=130){
+				//left arrow
+				do move_horizontal(-1);
+				do Sys.wait(wait_time);
+				}
+			if (key=132){
+				//right arrow
+				do move_horizontal(1);
+				do Sys.wait(wait_time);
+				}
+			if (key=131){
+				//up arrow
+				do move_vertical(-1);
+				do Sys.wait(wait_time);
+				}
+			if (key=133){
+				//down arrow
+				do move_vertical(1);
+				do Sys.wait(wait_time);
+				}
+			if( (key=32) | (key=116) | (key=84) ){
+				// space, t, or T (toggle)
+				do lifeGrid.toggle(curX, curY);
+				do Sys.wait(wait_time);
+				}
+			if (key=49){
+				//1. Blinker
+				do lifeGrid.setGrid(false);
+				do lifeGrid.renderGrid();
+				do lifeGrid.setBlinker();
+				do Sys.wait(wait_time);
+				}
+			if (key=50){
+				//2. Line10
+				do lifeGrid.setGrid(false);
+				do lifeGrid.renderGrid();
+				do lifeGrid.setLine10();
+				do Sys.wait(wait_time);
+				}
+			if (key=51){
+				//3. Glider
+				do lifeGrid.setGrid(false);
+				do lifeGrid.renderGrid();
+				do lifeGrid.setGlider();
+				do Sys.wait(wait_time);
+				}
+			if (key=52){
+				//4. Exploder
+				do lifeGrid.setGrid(false);
+				do lifeGrid.renderGrid();
+				do lifeGrid.setExploder();
+				do Sys.wait(wait_time);
+				}
+			if (key=53){
+				//5. Lightweight Spaceship
+				do lifeGrid.setGrid(false);
+				do lifeGrid.renderGrid();
+				do lifeGrid.setLightweightSpaceship();
+				do Sys.wait(wait_time);
+				}
+			if( (key=80) | (key=112) ){
+				// P or p (play)
+				do lifeGrid.render(curX, curY);
+				do Sys.wait(wait_time);
+				let mode = 2;
+				}
+			if( (key=72) | (key=104) ){
+				// H or h (help)
+				do lifeGrid.render(curX, curY);
+				do Sys.wait(wait_time);
+				let mode = 0;
+				}
+			if ( (key=81) | (key=113) ){
+				//q or Q (quit)
+				do lifeGrid.renderGrid();
+				let quit = true;
+				}
+			}
+		return;
+		}
+
+	
+	/** Shift horizontally */
+	method void move_horizontal(int step){
+		if( ~( (curX + step) < 0 ) & ( (curX + step) < (512/size) ) ){ //stay within grid width
+			do lifeGrid.render(curX, curY);
+			let curX = curX + step;
+			do lifeGrid.selectCell(curX, curY);
+			}
+		return;
+		}
+
+
+	/** Shift vertically */
+	method void move_vertical(int step){
+		if( ~( (curY + step) < 0 ) & ( (curY + step) < (256/size) ) ){//stay within grid height
+			do lifeGrid.render(curX, curY);
+			let curY = curY + step;
+			do lifeGrid.selectCell(curX, curY);
+			}
+		return;
+		}
+
+
+	method void play(){
+		/** Implements play mode */
+		var int key;
+		let key = 0;
+		let display_help = false;
+
+		while (key=0){
+			do nextStep();
+			let key=Keyboard.keyPressed();
+			if( (key=72) | (key=104) ){
+				// H or h (help)
+				let mode = 0;
+				}
+			if ( (key=67) | (key=99) ){
+				//c or C (configure)
+				do lifeGrid.renderGrid();
+				let mode=1;
+				}
+			if( (key=81) | (key=113) ){
+				// Q or q (quit)
+				let quit = true;
+				}
+			}
+		return;
+		}
+
+
+	method void nextStep(){
+		/** Increments the game by one step */
+		do LifeGrid.calcNextStepGrid(lifeGrid, nextGrid);
+		do LifeGrid.copyCellStates(lifeGrid, nextGrid);
+		do lifeGrid.renderGrid();
+		return;
+		}
+		
+}

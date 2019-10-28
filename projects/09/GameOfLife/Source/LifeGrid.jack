@@ -1,0 +1,371 @@
+// The Game of Life grid.  
+// This consist of a two dimensional array.  Each cell in the grid represents a cell in Conway's Game of Life
+// At the lowest level, each element of the array is a boolean indicating if that element is alive/active or dead/inactive
+
+class LifeGrid {
+	field int size, width, height;
+	field Array grid;
+
+	constructor LifeGrid new(int cellSize) {
+		let size = cellSize;
+		let height = 256/size;
+		let width = 512/size;
+		let grid = LifeGrid.initGrid(width, height);
+		return this;
+		}
+
+	method void dispose() {
+		do LifeGrid.disposeGrid(grid, height);
+		do Memory.deAlloc(this);
+		return;
+		}
+
+
+	/** Initializes a new grid with inactive cells */
+	function Array initGrid(int width, int height){
+		var int curRow, curCol;
+		var Array row, newGrid;
+		let newGrid = Array.new(height);
+		let curRow = 0;
+		while(curRow<height){
+			let row=Array.new(width);
+			let curCol=0;
+			while(curCol<width){
+				let row[curCol]=false;
+				let curCol=curCol+1;
+				}
+			let newGrid[curRow]=row;
+			let curRow=curRow+1;
+			}
+		return newGrid;
+		}
+
+	/** Disposes an old 2-D grid */
+	function void disposeGrid(Array oldGrid, int height){
+		var int curRow;
+		var Array row;
+		let curRow = 0;
+		while(curRow<height){
+			let row = oldGrid[curRow];
+			do row.dispose();
+			let curRow = curRow+1;
+			}
+		do oldGrid.dispose();
+		return;
+		}
+
+
+// Methods to retrieve basic object information
+
+	/** Returns the cell state at a given grid location */
+	method boolean getCellState(int x, int y){
+		var array gridRow;
+		var boolean cellState;
+		let gridRow = grid[y];
+		let cellState = gridRow[x];
+		return cellState;
+		}
+
+	/** Returns the size of each cell in the grid */
+	method int getCellSize(){
+		return size;
+		}
+
+	/** Returns the grid width */
+	method int getWidth(){
+		return width;
+		}
+
+	/** Returns the grid height */
+	method int getHeight(){
+		return height;
+		}
+
+
+//Methods to control and render the active states of cells and grids
+
+		/** Sets the cell state without rendering the screen accordingly */
+	method void setState(int x, int y, boolean state){
+		var array gridRow;
+		let gridRow = grid[y];
+		let gridRow[x] = state;
+		return;
+		}
+
+	/** Activates the cell by setting it to 'true' and drawing a square */
+	method void activate(int x, int y){
+		do setState(x, y, true);
+		do render(x, y);
+		return;
+		}
+
+	/** Deactivates the cell by setting it to 'false' and undrawing a square */
+	method void deactivate(int x, int y){
+		do setState(x, y, false);
+		do render(x, y);
+		return;
+		}
+
+	/** Toggles the cell state between active (true) and inactive (false) */
+	method void toggle(int x, int y){
+		var boolean startState;
+		let startState = getCellState(x, y);
+		if (~startState) {
+			do activate(x, y);
+			}
+		else {
+			do deactivate(x, y);
+			}
+		return;
+		}
+
+	/** Renders a cell by drawing a rectangle in its location using a color corresponding to the cellState.  (Does not change cellState.) */
+	method void render(int x, int y){
+		do Screen.setColor(getCellState(x, y));
+		do Screen.drawRectangle(x*size, y*size, ((x+1)*size)-1, ((y+1)*size)-1);
+		return;
+		}
+
+	/** Renders the entire grid */
+	method void renderGrid(){
+		var int curRow, curCol;
+		let curRow=0;
+		while (curRow<height){
+			let curCol=0;
+			while (curCol<width){
+				do render(curCol, curRow);
+				let curCol=curCol+1;
+				}
+			let curRow=curRow+1;
+			}
+		return;
+		}
+
+	/** Resets the entire grid to a single state*/
+	method void setGrid(boolean state){
+		var int curRow, curCol;
+		let curRow=0;
+		while (curRow<height){
+			let curCol=0;
+			while (curCol<width){
+				do setState(curCol, curRow, state);
+				let curCol=curCol+1;
+				}
+			let curRow=curRow+1;
+			}
+		return;
+		}
+
+
+// Methods used to configure the initial grid, including preconfigured patterns
+
+	/** Activates a 2x2 square */
+	// Taken out of final set of choices because it is boring, but left in the code
+	method void setSquare2x2(){
+		var int x, y;
+		let y = height/2;
+		let x = (width/2);
+		do activate(x,y);
+		do activate(x+1,y);
+		do activate(x,y+1);
+		do activate(x+1,y+1);
+		return;
+		}
+
+	/** Activates a Blinker */
+	method void setBlinker(){
+		var int x, y, i;
+		let y = height/2;
+		let x = (width/2);
+		let i=0;
+		do activate(x-1,y);
+		do activate(x,y);
+		do activate(x+1,y);
+		return;
+		}
+	
+	/** Activates a 10-cell long horizontal line */
+	method void setLine10(){
+		var int x, y, i;
+		let y = height/2;
+		let x = (width/2)-5;
+		let i=0;
+		while (i<10){
+			do activate(x+i,y);
+			let i=i+1;
+			}
+		return;
+		}
+
+	/** Activates a "glider" shape */
+	method void setGlider(){
+		var int x, y;
+		let y = height/2;
+		let x = (width/2);
+		do activate(x,y-1);
+		do activate(x+1,y);
+		do activate(x-1,y+1);
+		do activate(x,y+1);
+		do activate(x+1,y+1);
+		return;
+		}
+
+	/** Activates a "small exploder" shape */
+
+	/** Activates an "exploder" shape */
+	method void setExploder(){
+		var int x, y, i;
+		let y = (height/2);
+		let x = (width/2);
+		let i = 0;
+		while (i<3){
+			do activate(x-2, y+i);
+			do activate(x+2, y+i);
+			do activate(x-2, y-i); // Extra step when i=0
+			do activate(x+2, y-i); // Extra step when i=0
+			let i = i+1;
+			}
+		do activate(x, y+i-1);
+		do activate(x, y-i+1);
+		return;
+		}	
+
+	/** Activates an "lightweight spaceship" shape */
+	method void setLightweightSpaceship(){
+		var int x, y;
+		let y = (height/2);
+		let x = (width/2);
+
+		do activate(x-1, y+1);
+		do activate(x, y+1);
+		do activate(x+1, y+1);
+		do activate(x+2, y+1);
+
+		do activate(x-2, y);
+		do activate(x+2, y);
+
+		do activate(x+2, y-1);
+
+		do activate(x-2, y-2);
+		do activate(x+1, y-2);
+
+		return;
+		}
+
+	/** Activates a "tumbler" shape */
+
+	/** Activates a "Gosper glider gun" shape */
+
+	/** https://www.conwaylife.com/wiki/Conway's_Game_of_Life#Patterns: Block, blinker, Glider, pulsar, Gosper glider gun */
+
+
+	/** Renders an outline of the cell located at point x,y of the grid */
+	method void selectCell(int x, int y){
+		do Screen.setColor(~getCellState(x,y));
+		do Screen.drawLine(x*size, y*size, ((x+1)*size)-1, y*size); // top border
+		do Screen.drawLine(((x+1)*size)-1, y*size, ((x+1)*size)-1, ((y+1)*size)-1); // right border
+		do Screen.drawLine(((x+1)*size)-1, ((y+1)*size)-1, x*size, ((y+1)*size)-1); // bottom border
+		do Screen.drawLine(x*size, ((y+1)*size)-1, x*size, y*size); // left border
+		return;
+		}
+
+
+// Methods needed to implement the Game of Life rules/algorithm
+
+	/** Populates a LifeGrid with the next state of a (different) input LifeGrid */
+	function void calcNextStepGrid(LifeGrid lifeGrid, LifeGrid nextGrid){
+		var int i, j, width, height;
+		var boolean nextState;
+		let width = lifeGrid.getWidth();
+		let height = lifeGrid.getHeight(); 
+		let i = 0;
+		while (i<width) {
+			let j = 0;
+			while (j<height) {
+				let nextState=lifeGrid.nextCellState(i, j);
+				do nextGrid.setState(i, j, nextState);
+				let j = j+1;
+				}
+			let i = i+1;
+			}
+		return;
+		}
+
+	/** Copies the values in one lifeGrid to another */
+	function void copyCellStates(LifeGrid targetGrid, LifeGrid sourceGrid){
+		var int i, j, width, height;
+		var boolean state;
+		let width = sourceGrid.getWidth();
+		let height = sourceGrid.getHeight();
+		let i = 0;
+		while (i<width) {
+			let j = 0;
+			while (j<height) {
+				let state = sourceGrid.getCellState(i, j);
+				do targetGrid.setState(i, j, state);
+				let j = j+1;
+				}
+			let i = i+1;
+			}
+		return;
+		}
+
+	/** Determines the next state of a cell based upon its current state and neighbor count */
+	method boolean nextCellState(int x, int y){
+		var int neighborCount;
+		var boolean isActive, nextState;
+		let neighborCount = countNeighbors(x, y);
+		let isActive = getCellState(x, y);
+
+		/* The below section implements the core Game of Life algorithm
+		   The logic could be written using more compact code,
+		   but this is easier to read and validate vs. english rules */
+
+		if (isActive){
+			if ((neighborCount=2) | (neighborCount=3)){
+				let nextState = true;
+				}
+			else {
+				let nextState = false;
+				}
+			}
+
+		if (~isActive){
+			if (neighborCount=3){
+				let nextState = true;
+				}
+			else {
+				let nextState = false;
+				}
+			}
+		
+		return nextState;
+		}
+
+	/** Returns the number of live/active/true cells adjacent to the cell located at coordinates x,y */
+	method int countNeighbors(int x, int y){
+		var int i, j, count;
+		let count=0;
+		let i=-1;
+
+		while (i<2){
+			let j=-1;
+			while (j<2){
+				// Do not count cell(x,y) as a neighbor of itself
+				if ( ~( (i=0) & (j=0) ) ){
+					// Ignore (x,y) combinations that fall outside of the grid boundaries
+					if ( ((x+i)>-1) & ((y+j)>-1) & ((x+i)<width) & ((y+j)<height) ){
+						// Count only active neighbors
+						if (getCellState(x+i, y+j)){
+							let count=count+1;
+							}
+						}
+					}
+				let j=j+1;
+				}			
+			let i=i+1;
+			}
+		return count;
+		}
+	}
+	

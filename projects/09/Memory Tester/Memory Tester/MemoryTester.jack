@@ -1,0 +1,108 @@
+//This file contains Memory Tester class which is part of MemoryTester game
+// It contains the logic for running the game
+
+
+class MemoryTester{
+        //variable declarations
+        field String user_name;
+        field int user_choice;
+        field int rand_seed;
+        field int rand_num;
+        field int user_entered_number;
+
+    //constructor for MemoryTester class
+    constructor MemoryTester new(){
+        let rand_seed   = 0;
+        let rand_num    = 0;
+        let user_choice = 0;
+        let user_entered_number = 0;
+        return this;
+    }
+
+    //method to clear screen
+    method void clear_screen(){
+        do Screen.clearScreen();
+        return;
+    }
+
+    //method to generate random number from random seed
+    method int generate_rand_num(){
+        let rand_seed = ((rand_seed + rand_seed) * rand_seed) - rand_seed;
+        return rand_seed;
+    }
+
+    //run game method: logic to run the game
+    method void run_game(){
+            var int i;
+            var int won;
+        let won = 1;
+        let i = 0;
+        //Iterating over ten times to ask user for the input
+        while(i<10){
+            do Output.printString("Number:");
+            let rand_num = generate_rand_num();
+            do  Output.printInt(rand_num);do Output.println();
+            do Sys.wait(1000);
+            do clear_screen();
+            let user_entered_number = Keyboard.readInt("Enter the number previously displayed or 'q' to quit");
+
+            if(user_entered_number = 0){
+                let i = 9;
+            } else {
+                if(user_entered_number = rand_num){
+                    do Output.printString("Yaayyy u guessed it correctly");
+                }else{
+                    let won = 0;
+                    let i = 9;
+                    do Output.printString("Sorry u guessed it wrongly");
+                }
+            }
+            do Sys.wait(2000);
+            do clear_screen();
+            let i = i + 1;
+        }
+        if(won = 1){
+            do Output.printString("Congratulations!!!! You have WON the game!!!");
+            do Sys.wait(2000);
+        }
+        return;
+    }
+
+    //Intro method to give introduction about the game to the user
+    method void intro(){
+
+        let user_name = Keyboard.readLine("Please enter user-name:");
+        do Output.printString("Hello ");
+        do Output.printString(user_name);do Output.println();
+        do Output.printString("Let's Start the game!!!");do Output.println();do Output.println();
+        do Output.printString("In this game a number will be displayed on the screen for a certain amount of time, you have to remember the number and press the same number again");
+        do Output.println();do Output.println();
+        let rand_seed   = user_name.charAt(1);
+        let user_choice = Keyboard.readInt("Press 1 to start the game or any other key to exit: ");
+
+        if(user_choice = 1){
+
+            do run_game();
+        }
+        do clear_screen();
+        do Output.printString("Exiting from the game");
+        do Sys.wait(2000);
+        do clear_screen();
+        return;
+    }
+
+    // run method which is called by main class main function
+    method void run(){
+
+        do intro();
+        do clear_screen();
+        return;
+    }
+
+    //dispose method to avoid memory leaks
+    method void dispose(){
+
+        do Memory.deAlloc(this);
+        return;
+    }
+}

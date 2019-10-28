@@ -1,0 +1,7 @@
+// A single bowling frame
+ 
+class BowlingFrame {
+	
+	field int firstball, secondball;
+	field BowlingFrame nextFrame;
+}

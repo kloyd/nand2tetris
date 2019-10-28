@@ -1,0 +1,12 @@
+// Main file
+
+/** Initializes a new Bowling game and starts running it. */
+class Main {
+    function void main() {
+        var BowlingGame game;
+        let game = BowlingGame.new();
+        do game.run();
+        do game.dispose();
+        return;
+    }
+}

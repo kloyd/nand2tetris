@@ -1,0 +1,21 @@
+// BowlingGame
+
+class BowlingGame {
+	
+	constructor BowlingGame new() {
+
+	    return this;
+	}
+
+	method void run() {
+		// run the game
+
+		return;
+	}
+
+	method void dispose() {
+		// clean up when finished
+
+		return;
+	}
+}

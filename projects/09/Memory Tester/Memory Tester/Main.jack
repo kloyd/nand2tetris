@@ -1,0 +1,20 @@
+//This file is part of Memory Tester projects
+//This is the Main class of Memory Tester Project
+
+/**
+    This project contains two classes:
+    - Main class          - Creates new Memory Tester object and invokes run method of Memory Tester class
+    - MemoryTester class  - -> Creates introduction to give a walkthrough about the game.
+                            -> Generates random numbers based on the random seed(which is taken from the user name)
+                            -> Compares the random number with the user entered number. If matches continue else exit
+*/
+
+class Main{
+    function void main(){
+        var MemoryTester mem_test;
+        let mem_test = MemoryTester.new();
+        do mem_test.run();
+        do mem_test.dispose();
+        return;
+    }
+}
