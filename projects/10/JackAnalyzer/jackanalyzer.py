@@ -12,6 +12,7 @@ class JackTokenizer:
     digits = '0123456789'
     whitespaces = ' \r\n\t'
     token_list = []
+    token_position = 0
 
     def __init__(self, filename):
         input_file = open(filename, 'r')
@@ -20,8 +21,10 @@ class JackTokenizer:
         for line in input_file:
             self.parse_tokens(line)
         input_file.close()
+        self.token_position = 0
         for token in self.token_list:
             self.print_xml_tokens(token)
+
 
     def print_xml_tokens(self, token):
         token_type = self.token_type(token)
@@ -111,10 +114,15 @@ class JackTokenizer:
             return False
 
     def has_more_tokens(self):
-        return False
+        if self.token_position < len(self.token_list):
+            return True
+        else:
+            return False
 
     def advance(self):
-        print("advance")
+        give_token = self.token_list[self.token_position]
+        self.token_position = self.token_position + 1
+        return give_token
 
     def token_type(self, token):
         test_value = 99999
@@ -144,6 +152,32 @@ class JackCompiler:
         while self.tokenizer.has_more_tokens():
             print(self.tokenizer.advance())
 
+    def compileExpression(self):
+        print("compile expression")
+
+    def compileStatements(self):
+        print("compile statements")
+
+    def compileIfStatement(self):
+        print("compile if statement")
+
+    def compileWhileStatement(self):
+        print("compile while statement")
+
+    def compileTerm(self):
+        print("compile term")
+
+    def eat(self, string):
+        if self.current_token != string:
+            return False
+        else:
+            self.current_token = self.tokenizer.advance
+
+
+# Main program.
+if len(sys.argv) != 2:
+    print("Usage: " + sys.argv[0] + " vm_prog")
+    exit(-1)
 
 def analyze_file(source_file):
     tokenizer = JackTokenizer(source_file)
@@ -156,11 +190,6 @@ def analyze_directory(source_dir):
         analyze_file(file)
 
 
-# Main program.
-if len(sys.argv) != 2:
-    print("Usage: " + sys.argv[0] + " vm_prog")
-    exit(-1)
-
 compareCounter = 1
 returnCounter = 1
 
@@ -170,3 +199,5 @@ if source_filename.endswith('.jack'):
     analyze_file(source_filename)
 else:
     analyze_directory(source_filename)
+
+
