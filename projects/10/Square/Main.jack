@@ -17,6 +17,14 @@ class Main {
       return;
     }
 
+    function whiler() {
+        var int i;
+        let i = 0;
+        while(~exec) {
+            let i = i + 1;
+        }
+    }
+
     function void test() {  // Added to test Jack syntax that is not use in
         var int i, j;       // the Square files.
         var String s;

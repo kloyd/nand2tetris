@@ -7,7 +7,7 @@ class JackTokenizer:
 
     keyword_list = ['class', 'constructor', 'function', 'field', 'static', 'var', 'int', 'char', 'boolean',
                     'void', 'true', 'false', 'null', 'this', 'let', 'do', 'if', 'else', 'while', 'return']
-    symbols = '{}()[].,;+-*/&|<>=-'
+    symbols_list = ['{', '}', '(', ')', '[', ']', '.', ',', ';', '+', '-', '*', '/', '&', '|', '<', '>', '=', '-']
     letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
     digits = '0123456789'
     whitespaces = ' \r\n\t'
@@ -108,7 +108,7 @@ class JackTokenizer:
             return False
 
     def is_symbol(self, c):
-        if c in self.symbols:
+        if c in self.symbols_list:
             return True
         else:
             return False
@@ -127,7 +127,7 @@ class JackTokenizer:
     def token_type(self, token):
         test_value = 99999
 
-        if token in self.symbols:
+        if token in self.symbols_list:
             return "SYMBOL"
         if token in self.keyword_list:
             return "KEYWORD"
@@ -150,10 +150,29 @@ class JackCompiler:
 
     def run(self):
         while self.tokenizer.has_more_tokens():
-            print(self.tokenizer.advance())
+            self.current_token = self.tokenizer.advance()
+            if self.current_token == 'while':
+                self.compileWhileStatement()
+
+    def compileTerm(self):
+        print("<term>")
+        print(self.current_token)
+        self.eat(self.current_token)
+        print("<term>")
 
     def compileExpression(self):
-        print("compile expression")
+        print("<expression>")
+        if self.tokenizer.token_type(self.current_token) == "SYMBOL":
+            print("<symbol>", self.current_token, "</symbol>")
+            self.eat(self.current_token)
+        else:
+            self.compileTerm()
+        if self.tokenizer.token_type(self.current_token) == "SYMBOL":
+            print("<symbol>", self.current_token, "</symbol>")
+            self.eat(self.current_token)
+            self.compileTerm()
+
+        print("</expression>")
 
     def compileStatements(self):
         print("compile statements")
@@ -162,16 +181,32 @@ class JackCompiler:
         print("compile if statement")
 
     def compileWhileStatement(self):
-        print("compile while statement")
-
-    def compileTerm(self):
-        print("compile term")
-
-    def eat(self, string):
-        if self.current_token != string:
-            return False
+        if self.eat('while'):
+            print("<whileStatement>")
+            print("<keyword> while </keyword")
         else:
-            self.current_token = self.tokenizer.advance
+            print("Error processing while statement>> while", self.current_token)
+            exit(-1)
+        if self.eat('('):
+            print ("<symbol> ( </symbol>")
+        else:
+            print("Error processing while statement >> while", self.current_token)
+            exit(-1)
+        self.compileExpression()
+        print("</whileStatement>")
+
+    def advance(self):
+        if self.tokenizer.has_more_tokens():
+            self.current_token = self.tokenizer.advance()
+
+    def eat(self, test_token):
+        if self.current_token == test_token:
+            if self.tokenizer.has_more_tokens():
+                self.current_token = self.tokenizer.advance()
+            return True
+        else:
+            return False
+
 
 
 # Main program.
