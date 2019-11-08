@@ -5,33 +5,53 @@ import re
 
 class JackTokenizer:
 
-    keyword_list = ['class', 'constructor', 'function', 'field', 'static', 'var', 'int', 'char', 'boolean',
+    keyword_list = ['class', 'constructor', 'method', 'function', 'field', 'static', 'var', 'int', 'char', 'boolean',
                     'void', 'true', 'false', 'null', 'this', 'let', 'do', 'if', 'else', 'while', 'return']
-    symbols_list = ['{', '}', '(', ')', '[', ']', '.', ',', ';', '+', '-', '*', '/', '&', '|', '<', '>', '=', '-']
+    symbols_list = ['{', '}', '(', ')', '[', ']', '.', ',', ';', '+', '-', '*', '/', '&', '|', '<', '>', '=', '-', '~']
     letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
     digits = '0123456789'
     whitespaces = ' \r\n\t'
     token_list = []
+    token_type = []
     token_position = 0
 
     def __init__(self, filename):
         input_file = open(filename, 'r')
+        output_file = open(filename + 'T.xml', 'w')
         current_token = ""
         self.token_list = []
         for line in input_file:
             self.parse_tokens(line)
         input_file.close()
+        self.rewind_token_list()
+        self.save_tokens(output_file)
+
+    def rewind_token_list(self):
         self.token_position = 0
-        for token in self.token_list:
-            self.print_xml_tokens(token)
 
+    def save_tokens(self, output_file):
+        output_file.write('<tokens>\n')
+        while self.has_more_tokens():
+            token, type  = self.advance()
+            self.print_xml_token(output_file, token, type)
+        output_file.write('</tokens>\n')
+        self.rewind_token_list()
 
-    def print_xml_tokens(self, token):
-        token_type = self.token_type(token)
+    def add_token(self, token):
+        self.token_list.append(token)
+        self.token_type.append(self.get_token_type(token))
+
+    def print_xml_token(self, output_file, token, token_type):
         if token_type == 'KEYWORD':
-            print('<keyword>', token, '</keyword>')
+            output_file.write('<keyword> {0} </keyword>\n'.format(token))
         if token_type == 'IDENTIFIER':
-            print('<identifier>', token, '</identifier>')
+            output_file.write('<identifier> {0} </identifier>\n'.format(token))
+        if token_type == 'SYMBOL':
+            output_file.write('<symbol> {0} </symbol>\n'.format(token))
+        if token_type == 'STRING_CONSTANT':
+            output_file.write('<stringConstant> {0} </stringConstant>\n'.format(token[1:]))
+        if token_type == 'INT_CONSTANT':
+            output_file.write('<integerConstant> {0} </integerConstant>\n'.format(token))
 
     def parse_tokens(self, line):
         current_token = ""
@@ -52,7 +72,7 @@ class JackTokenizer:
             # quoted string constants.
             if c == '"':
                 if in_quoted_string:
-                    current_token = '"' + current_token + '"'
+                    current_token = '"' + current_token
                     in_quoted_string = False
                 else:
                     in_quoted_string = True
@@ -63,9 +83,9 @@ class JackTokenizer:
 
             if self.is_symbol(c):
                 if len(current_token) > 0:
-                    self.token_list.append(current_token)
+                    self.add_token(current_token)
                 current_token = c
-                self.token_list.append(current_token)
+                self.add_token(current_token)
                 current_token = ""
 
             if self.is_whitespace(c):
@@ -73,7 +93,7 @@ class JackTokenizer:
                     current_token = current_token + c
                 else:
                     if len(current_token) > 0:
-                        self.token_list.append(current_token)
+                        self.add_token(current_token)
                     current_token = ""
             char_count = char_count + 1
 
@@ -121,10 +141,23 @@ class JackTokenizer:
 
     def advance(self):
         give_token = self.token_list[self.token_position]
+        token_type = self.token_type[self.token_position]
+        if give_token == '&':
+            # Ampersand needs to be &amp; for XML/Web
+            give_token = '&amp;'
+        if give_token == '<':
+            # < needs to be &lt; for XML/Web
+            give_token = '&lt;'
+        if give_token == '>':
+            # > needs to be &gt; for XML/Web
+            give_token = '&gt;'
         self.token_position = self.token_position + 1
-        return give_token
+        if token_type == "STRING_CONSTANT":
+            return give_token[1:], token_type
+        else:
+            return give_token, token_type
 
-    def token_type(self, token):
+    def get_token_type(self, token):
         test_value = 99999
 
         if token in self.symbols_list:
@@ -149,8 +182,10 @@ class JackCompiler:
         self.tokenizer = tokenizer
 
     def run(self):
+        print("Compiling...")
         while self.tokenizer.has_more_tokens():
-            self.current_token = self.tokenizer.advance()
+            self.current_token, token_type = self.tokenizer.advance()
+            # print(self.current_token, token_type)
             if self.current_token == 'while':
                 self.compileWhileStatement()
 
@@ -162,12 +197,12 @@ class JackCompiler:
 
     def compileExpression(self):
         print("<expression>")
-        if self.tokenizer.token_type(self.current_token) == "SYMBOL":
+        if self.token_type == "SYMBOL":
             print("<symbol>", self.current_token, "</symbol>")
             self.eat(self.current_token)
         else:
             self.compileTerm()
-        if self.tokenizer.token_type(self.current_token) == "SYMBOL":
+        if self.token_type == "SYMBOL":
             print("<symbol>", self.current_token, "</symbol>")
             self.eat(self.current_token)
             self.compileTerm()
@@ -197,12 +232,12 @@ class JackCompiler:
 
     def advance(self):
         if self.tokenizer.has_more_tokens():
-            self.current_token = self.tokenizer.advance()
+            self.current_token, self.token_type = self.tokenizer.advance()
 
     def eat(self, test_token):
         if self.current_token == test_token:
             if self.tokenizer.has_more_tokens():
-                self.current_token = self.tokenizer.advance()
+                self.current_token, self.token_type = self.tokenizer.advance()
             return True
         else:
             return False
@@ -211,7 +246,7 @@ class JackCompiler:
 
 # Main program.
 if len(sys.argv) != 2:
-    print("Usage: " + sys.argv[0] + " vm_prog")
+    print("Usage: " + sys.argv[0] + " dir | jack_prog.jack")
     exit(-1)
 
 def analyze_file(source_file):
