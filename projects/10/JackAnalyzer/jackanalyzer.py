@@ -58,7 +58,7 @@ class JackTokenizer:
         comment_line = re.search('^//', line)
         if comment_line is not None:
             return
-        comment_line = re.search('^/\*', line)
+        comment_line = re.search('^\s*\*|^\s*\/\*', line)
         if comment_line is not None:
             return
         char_count = 0
@@ -186,28 +186,51 @@ class JackCompiler:
         while self.tokenizer.has_more_tokens():
             self.current_token, token_type = self.tokenizer.advance()
             # print(self.current_token, token_type)
+            if self.current_token == 'class':
+                self.compileClass()
+
             if self.current_token == 'while':
                 self.compileWhileStatement()
 
     def compileTerm(self):
-        print("<term>")
-        print(self.current_token)
-        self.eat(self.current_token)
-        print("<term>")
+        if self.tokey_type != "SYMBOL":
+            print("<term>")
+            print(self.current_token)
+            self.eat(self.current_token)
+            print("<term>")
 
     def compileExpression(self):
         print("<expression>")
-        if self.token_type == "SYMBOL":
-            print("<symbol>", self.current_token, "</symbol>")
-            self.eat(self.current_token)
-        else:
-            self.compileTerm()
+        self.compileTerm()
+        self.advance()
         if self.token_type == "SYMBOL":
             print("<symbol>", self.current_token, "</symbol>")
             self.eat(self.current_token)
             self.compileTerm()
-
         print("</expression>")
+
+
+    def advance(self):
+        if self.tokenizer.has_more_tokens():
+            self.current_token, self.token_type = self.tokenizer.advance()
+
+    def compileClass(self):
+        print("<class>")
+        self.eat("class")
+
+        print("</class>")
+
+    def compileClassVarDec(self):
+        print("compile class variable declarations")
+
+    def compileSubroutine(self):
+        print("compile subroutine")
+
+    def compileParameterList(self):
+        print("compile parameter list")
+
+    def compileVarDec(self):
+        print("compile variable declaration")
 
     def compileStatements(self):
         print("compile statements")
@@ -223,16 +246,12 @@ class JackCompiler:
             print("Error processing while statement>> while", self.current_token)
             exit(-1)
         if self.eat('('):
-            print ("<symbol> ( </symbol>")
+            print("<symbol> ( </symbol>")
         else:
             print("Error processing while statement >> while", self.current_token)
             exit(-1)
         self.compileExpression()
         print("</whileStatement>")
-
-    def advance(self):
-        if self.tokenizer.has_more_tokens():
-            self.current_token, self.token_type = self.tokenizer.advance()
 
     def eat(self, test_token):
         if self.current_token == test_token:
