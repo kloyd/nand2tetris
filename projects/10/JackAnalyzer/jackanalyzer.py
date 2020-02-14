@@ -182,10 +182,9 @@ class JackCompiler:
         self.tokenizer = tokenizer
 
     def run(self):
-        print("Compiling...")
         while self.tokenizer.has_more_tokens():
             self.current_token, token_type = self.tokenizer.advance()
-            # print(self.current_token, token_type)
+            #print(self.current_token, token_type)
             if self.current_token == 'class':
                 self.compileClass()
 
@@ -217,8 +216,15 @@ class JackCompiler:
     def compileClass(self):
         print("<class>")
         self.eat("class")
-
+        print("<keyword> class </keyword>")
+        print("<identifier> " + self.current_token + " </identifier>")
+        self.advance()
+        if self.eat("{"):
+            print("<symbol> { </symbol>")
+            if self.current_token == "static":
+                self.compileClassVarDec()
         print("</class>")
+
 
     def compileClassVarDec(self):
         print("compile class variable declarations")
@@ -253,6 +259,14 @@ class JackCompiler:
         self.compileExpression()
         print("</whileStatement>")
 
+    def advance(self):
+        if self.tokenizer.has_more_tokens():
+            self.current_token, self.token_type = self.tokenizer.advance()
+            return True
+        else:
+            return False
+
+
     def eat(self, test_token):
         if self.current_token == test_token:
             if self.tokenizer.has_more_tokens():
@@ -262,14 +276,15 @@ class JackCompiler:
             return False
 
 
-
 # Main program.
 if len(sys.argv) != 2:
     print("Usage: " + sys.argv[0] + " dir | jack_prog.jack")
     exit(-1)
 
+
 def analyze_file(source_file):
     tokenizer = JackTokenizer(source_file)
+    print("Compiling " + source_file + " ...")
     compiler = JackCompiler(tokenizer)
     compiler.run()
 
