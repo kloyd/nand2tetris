@@ -178,8 +178,9 @@ class JackTokenizer:
 
 class JackCompiler:
 
-    def __init__(self, tokenizer):
+    def __init__(self, tokenizer, source_file):
         self.tokenizer = tokenizer
+        self.output_file = open(source_file + 'J.xml', 'w')
 
     def run(self):
         while self.tokenizer.has_more_tokens():
@@ -188,46 +189,74 @@ class JackCompiler:
             if self.current_token == 'class':
                 self.compileClass()
 
-            if self.current_token == 'while':
-                self.compileWhileStatement()
+
+
+
+    def output_element(self, element):
+        self.output_file.write(element)
+        self.output_file.write("\n")
+        print(element)
+
 
     def compileTerm(self):
-        if self.tokey_type != "SYMBOL":
-            print("<term>")
-            print(self.current_token)
+        if self.token_type != "SYMBOL":
+            self.output_element("<term>")
+            self.output_element(self.current_token)
             self.eat(self.current_token)
-            print("<term>")
+            self.output_element("<term>")
 
     def compileExpression(self):
-        print("<expression>")
+        self.output_element("<expression>")
         self.compileTerm()
         self.advance()
         if self.token_type == "SYMBOL":
-            print("<symbol>", self.current_token, "</symbol>")
+            self.output_element("<symbol>" + self.current_token + "</symbol>")
             self.eat(self.current_token)
             self.compileTerm()
-        print("</expression>")
-
+        self.output_element("</expression>")
 
     def advance(self):
         if self.tokenizer.has_more_tokens():
             self.current_token, self.token_type = self.tokenizer.advance()
 
     def compileClass(self):
-        print("<class>")
+        self.output_element("<class>")
         self.eat("class")
-        print("<keyword> class </keyword>")
-        print("<identifier> " + self.current_token + " </identifier>")
+        self.output_element(" <keyword> class </keyword>")
+        self.output_element(" <identifier> " + self.current_token + " </identifier>")
         self.advance()
         if self.eat("{"):
-            print("<symbol> { </symbol>")
-            if self.current_token == "static":
-                self.compileClassVarDec()
-        print("</class>")
+            self.output_element(" <symbol> { </symbol>")
+
+            while self.current_token != "}":
+
+                if self.current_token == "static":
+                    self.compileClassVarDec()
+
+                if self.current_token == 'while':
+                    self.compileWhileStatement()
+
+                #self.output_element(self.current_token)
+                self.advance()
+
+        self.output_element(" <symbol> } </symbol>")
+        self.output_element("</class>")
 
 
     def compileClassVarDec(self):
-        print("compile class variable declarations")
+        self.output_element(" <classVarDec>")
+        self.output_element("  <keyword> static </keyword>")
+        self.eat("static")
+        self.output_element("  <keyword> " + self.current_token + " </keyword>")
+        self.advance()
+        if self.token_type == "IDENTIFIER":
+            self.output_element("  <identifier> " + self.current_token + " </identifier>")
+            self.advance()
+            if self.current_token == ";":
+                self.output_element("  <symbol> ; </symbol>")
+                self.advance()
+        self.output_element(" </classVarDec>")
+
 
     def compileSubroutine(self):
         print("compile subroutine")
@@ -246,18 +275,18 @@ class JackCompiler:
 
     def compileWhileStatement(self):
         if self.eat('while'):
-            print("<whileStatement>")
-            print("<keyword> while </keyword")
+            self.output_element("<whileStatement>")
+            self.output_element("<keyword> while </keyword")
         else:
             print("Error processing while statement>> while", self.current_token)
             exit(-1)
         if self.eat('('):
-            print("<symbol> ( </symbol>")
+            self.output_element("<symbol> ( </symbol>")
         else:
             print("Error processing while statement >> while", self.current_token)
             exit(-1)
         self.compileExpression()
-        print("</whileStatement>")
+        self.output_element("</whileStatement>")
 
     def advance(self):
         if self.tokenizer.has_more_tokens():
@@ -285,12 +314,13 @@ if len(sys.argv) != 2:
 def analyze_file(source_file):
     tokenizer = JackTokenizer(source_file)
     print("Compiling " + source_file + " ...")
-    compiler = JackCompiler(tokenizer)
+    compiler = JackCompiler(tokenizer, source_file)
     compiler.run()
 
 
 def analyze_directory(source_dir):
-    for file in glob.glob("*.jack"):
+    for file in glob.glob(source_dir + "*.jack"):
+        print(file)
         analyze_file(file)
 
 
