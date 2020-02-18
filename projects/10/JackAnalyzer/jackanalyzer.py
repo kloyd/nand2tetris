@@ -17,7 +17,8 @@ class JackTokenizer:
 
     def __init__(self, filename):
         input_file = open(filename, 'r')
-        output_file = open(filename + 'T.xml', 'w')
+        output_filename = filename.split('.')[0] + "T.xml"
+        output_file = open(output_filename, 'w')
         current_token = ""
         self.token_list = []
         for line in input_file:
@@ -42,15 +43,15 @@ class JackTokenizer:
         self.token_type.append(self.get_token_type(token))
 
     def print_xml_token(self, output_file, token, token_type):
-        if token_type == 'KEYWORD':
+        if token_type == 'keyword':
             output_file.write('<keyword> {0} </keyword>\n'.format(token))
-        if token_type == 'IDENTIFIER':
+        if token_type == 'identifier':
             output_file.write('<identifier> {0} </identifier>\n'.format(token))
-        if token_type == 'SYMBOL':
+        if token_type == 'symbol':
             output_file.write('<symbol> {0} </symbol>\n'.format(token))
-        if token_type == 'STRING_CONSTANT':
-            output_file.write('<stringConstant> {0} </stringConstant>\n'.format(token[1:]))
-        if token_type == 'INT_CONSTANT':
+        if token_type == 'string_constant':
+            output_file.write('<stringConstant> {0} </stringConstant>\n'.format(token))
+        if token_type == 'int_constant':
             output_file.write('<integerConstant> {0} </integerConstant>\n'.format(token))
 
     def parse_tokens(self, line):
@@ -152,7 +153,7 @@ class JackTokenizer:
             # > needs to be &gt; for XML/Web
             give_token = '&gt;'
         self.token_position = self.token_position + 1
-        if token_type == "STRING_CONSTANT":
+        if token_type == "string_constant":
             return give_token[1:], token_type
         else:
             return give_token, token_type
@@ -161,132 +162,144 @@ class JackTokenizer:
         test_value = 99999
 
         if token in self.symbols_list:
-            return "SYMBOL"
+            return "symbol"
         if token in self.keyword_list:
-            return "KEYWORD"
+            return "keyword"
         if '"' in token:
-            return "STRING_CONSTANT"
+            return "string_constant"
         try:
             test_value = int(token)
         except ValueError:
             test_value = 99999
         if test_value < 99999:
-            return "INT_CONSTANT"
+            return "int_constant"
 
-        return "IDENTIFIER"
+        return "identifier"
 
 
 class JackCompiler:
 
     def __init__(self, tokenizer, source_file):
         self.tokenizer = tokenizer
-        self.output_file = open(source_file + 'J.xml', 'w')
+        self.token_type = ""
+        self.current_token = ""
+        output_filename = source_file.split('.')[0] + ".xml"
+        self.output_file = open(output_filename, 'w')
 
     def run(self):
         while self.tokenizer.has_more_tokens():
-            self.current_token, token_type = self.tokenizer.advance()
-            #print(self.current_token, token_type)
-            if self.current_token == 'class':
-                self.compileClass()
-
-
-
-
-    def output_element(self, element):
-        self.output_file.write(element)
-        self.output_file.write("\n")
-        print(element)
-
-
-    def compileTerm(self):
-        if self.token_type != "SYMBOL":
-            self.output_element("<term>")
-            self.output_element(self.current_token)
-            self.eat(self.current_token)
-            self.output_element("<term>")
-
-    def compileExpression(self):
-        self.output_element("<expression>")
-        self.compileTerm()
-        self.advance()
-        if self.token_type == "SYMBOL":
-            self.output_element("<symbol>" + self.current_token + "</symbol>")
-            self.eat(self.current_token)
-            self.compileTerm()
-        self.output_element("</expression>")
-
-    def advance(self):
-        if self.tokenizer.has_more_tokens():
             self.current_token, self.token_type = self.tokenizer.advance()
+            if self.current_token == 'class':
+                self.compile_class()
 
-    def compileClass(self):
-        self.output_element("<class>")
+    def compile_term(self):
+        if self.token_type != "symbol":
+            self.output_tag("<term>")
+            self.output_tag(self.current_token)
+            self.eat(self.current_token)
+            self.output_tag("<term>")
+
+    def compile_expression(self):
+        self.output_tag("<expression>")
+        self.compile_term()
+        self.advance()
+        if self.token_type == "symbol":
+            self.output_tag("<symbol>" + self.current_token + "</symbol>")
+            self.eat(self.current_token)
+            self.compile_term()
+        self.output_tag("</expression>")
+
+    def compile_class(self):
+        self.output_tag("<class>")
+        self.output_tag("  <" + self.token_type + "> class </" + self.token_type + ">")
         self.eat("class")
-        self.output_element(" <keyword> class </keyword>")
-        self.output_element(" <identifier> " + self.current_token + " </identifier>")
+
+        self.output_tag("  <identifier> " + self.current_token + " </identifier>")
         self.advance()
         if self.eat("{"):
-            self.output_element(" <symbol> { </symbol>")
+            self.output_tag("  <symbol> { </symbol>")
 
             while self.current_token != "}":
 
                 if self.current_token == "static":
-                    self.compileClassVarDec()
+                    self.compile_class_var_dec()
+
+                if self.current_token == "function":
+                    self.compile_subroutine()
 
                 if self.current_token == 'while':
-                    self.compileWhileStatement()
+                    self.compile_while_statement()
 
                 #self.output_element(self.current_token)
                 self.advance()
 
-        self.output_element(" <symbol> } </symbol>")
-        self.output_element("</class>")
+        self.output_tag("  <symbol> } </symbol>")
+        self.output_tag("</class>")
 
-
-    def compileClassVarDec(self):
-        self.output_element(" <classVarDec>")
-        self.output_element("  <keyword> static </keyword>")
-        self.eat("static")
-        self.output_element("  <keyword> " + self.current_token + " </keyword>")
-        self.advance()
-        if self.token_type == "IDENTIFIER":
-            self.output_element("  <identifier> " + self.current_token + " </identifier>")
+    def compile_class_var_dec(self):
+        self.output_tag("  <classVarDec>")
+        while 1:
+            self.output_tag("    <keyword> static </keyword>")
+            self.eat("static")
+            self.output_tag("    <keyword> " + self.current_token + " </keyword>")
             self.advance()
-            if self.current_token == ";":
-                self.output_element("  <symbol> ; </symbol>")
+            if self.token_type == "identifier":
+                self.output_tag("    <identifier> " + self.current_token + " </identifier>")
                 self.advance()
-        self.output_element(" </classVarDec>")
+                if self.current_token == ";":
+                    self.output_tag("    <symbol> ; </symbol>")
+                    self.advance()
+            if self.eat("static"):
+                continue
+            else:
+                break
+        self.output_tag("  </classVarDec>")
 
+    def compile_subroutine(self):
+        self.output_tag("  <subroutineDec>")
+        self.output_element(4)
+        self.eat("function")
+        self.output_element(4)
+        self.advance()
+        self.output_element(4)
+        self.advance()
+        if self.eat("("):
+            self.output_tag("    <symbol> ( </symbol>")
+            self.output_tag("    <parameterList>")
+            # TODO: parameter list elements
+            self.output_tag("    </parameterList>")
+            self.output_tag("    <symbol> ) </symbol>")
+            self.eat(")")
+            self.output_tag("    <subroutineBody>")
+            if self.eat("{"):
+                self.output_tag("      <symbol> { </symbol>")
 
-    def compileSubroutine(self):
-        print("compile subroutine")
+    def compile_parameter_list(self):
+        self.output_tag("compile parameter list")
 
-    def compileParameterList(self):
-        print("compile parameter list")
+    def compile_var_dec(self):
+        self.output_tag("compile variable declaration")
 
-    def compileVarDec(self):
-        print("compile variable declaration")
+    def compile_statements(self):
+        self.output_tag("compile statements")
 
-    def compileStatements(self):
-        print("compile statements")
+    def compile_if_statement(self):
+        self.output_tag("compile if statement")
 
-    def compileIfStatement(self):
-        print("compile if statement")
-
-    def compileWhileStatement(self):
+    def compile_while_statement(self):
         if self.eat('while'):
-            self.output_element("<whileStatement>")
-            self.output_element("<keyword> while </keyword")
+            self.output_tag("<whileStatement>")
+            self.output_tag("<keyword> while </keyword")
         else:
             print("Error processing while statement>> while", self.current_token)
             exit(-1)
         if self.eat('('):
-            self.output_element("<symbol> ( </symbol>")
+            self.output_tag("<symbol> ( </symbol>")
         else:
             print("Error processing while statement >> while", self.current_token)
             exit(-1)
-        self.compileExpression()
-        self.output_element("</whileStatement>")
+        self.compile_expression()
+        self.output_tag("</whileStatement>")
 
     def advance(self):
         if self.tokenizer.has_more_tokens():
@@ -294,7 +307,6 @@ class JackCompiler:
             return True
         else:
             return False
-
 
     def eat(self, test_token):
         if self.current_token == test_token:
@@ -304,6 +316,16 @@ class JackCompiler:
         else:
             return False
 
+    def output_tag(self, element):
+        self.output_file.write(element)
+        self.output_file.write("\n")
+        print(element)
+
+    def output_element(self, depth):
+        output_string = depth*" " + "<" + self.token_type + "> " + self.current_token + " </" + self.token_type + ">"
+        self.output_file.write(output_string)
+        self.output_file.write("\n")
+        print(output_string)
 
 # Main program.
 if len(sys.argv) != 2:
