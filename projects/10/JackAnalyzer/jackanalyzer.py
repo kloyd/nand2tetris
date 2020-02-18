@@ -21,6 +21,7 @@ class JackTokenizer:
         output_file = open(output_filename, 'w')
         current_token = ""
         self.token_list = []
+        self.token_type = []
         for line in input_file:
             self.parse_tokens(line)
         input_file.close()
@@ -162,8 +163,10 @@ class JackTokenizer:
         test_value = 99999
 
         if token in self.symbols_list:
+            #print(token, "symbol")
             return "symbol"
         if token in self.keyword_list:
+            #print(token, "keyword")
             return "keyword"
         if '"' in token:
             return "string_constant"
@@ -333,17 +336,17 @@ if len(sys.argv) != 2:
     exit(-1)
 
 
-def analyze_file(source_file):
+def compile_file(source_file):
     tokenizer = JackTokenizer(source_file)
     print("Compiling " + source_file + " ...")
     compiler = JackCompiler(tokenizer, source_file)
     compiler.run()
 
 
-def analyze_directory(source_dir):
+def compile_directory(source_dir):
     for file in glob.glob(source_dir + "*.jack"):
         print(file)
-        analyze_file(file)
+        compile_file(file)
 
 
 compareCounter = 1
@@ -352,8 +355,8 @@ returnCounter = 1
 source_filename = sys.argv[1]
 # is this dir name or file name?
 if source_filename.endswith('.jack'):
-    analyze_file(source_filename)
+    compile_file(source_filename)
 else:
-    analyze_directory(source_filename)
+    compile_directory(source_filename)
 
 
