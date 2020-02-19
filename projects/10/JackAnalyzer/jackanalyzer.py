@@ -225,7 +225,10 @@ class JackCompiler:
             while self.current_token != "}":
 
                 if self.current_token == "static":
-                    self.compile_class_var_dec()
+                    self.compile_class_var_dec("static")
+
+                if self.current_token == "field":
+                    self.compile_class_var_dec("field")
 
                 if self.current_token == "function":
                     self.compile_subroutine()
@@ -239,23 +242,21 @@ class JackCompiler:
         self.output_tag("  <symbol> } </symbol>")
         self.output_tag("</class>")
 
-    def compile_class_var_dec(self):
+    def compile_class_var_dec(self, var_type):
         self.output_tag("  <classVarDec>")
-        while 1:
-            self.output_tag("    <keyword> static </keyword>")
-            self.eat("static")
-            self.output_tag("    <keyword> " + self.current_token + " </keyword>")
+        #self.output_tag("    <keyword> " + var_type + " </keyword>")
+        self.output_element(4)
+        self.eat(var_type)
+        self.output_element(4)
+        #self.output_tag("    <keyword> " + self.current_token + " </keyword>")
+        self.advance()
+        if self.token_type == "identifier":
+            self.output_tag("    <identifier> " + self.current_token + " </identifier>")
             self.advance()
-            if self.token_type == "identifier":
-                self.output_tag("    <identifier> " + self.current_token + " </identifier>")
-                self.advance()
-                if self.current_token == ";":
-                    self.output_tag("    <symbol> ; </symbol>")
-                    self.advance()
-            if self.eat("static"):
-                continue
-            else:
-                break
+            if self.current_token == ";":
+                self.output_tag("    <symbol> ; </symbol>")
+                
+                print(self.current_token, self.token_type)
         self.output_tag("  </classVarDec>")
 
     def compile_subroutine(self):
@@ -322,13 +323,12 @@ class JackCompiler:
     def output_tag(self, element):
         self.output_file.write(element)
         self.output_file.write("\n")
-        print(element)
+        #print(element)
 
     def output_element(self, depth):
         output_string = depth*" " + "<" + self.token_type + "> " + self.current_token + " </" + self.token_type + ">"
-        self.output_file.write(output_string)
-        self.output_file.write("\n")
-        print(output_string)
+        self.output_tag(output_string)
+
 
 # Main program.
 if len(sys.argv) != 2:
@@ -345,7 +345,6 @@ def compile_file(source_file):
 
 def compile_directory(source_dir):
     for file in glob.glob(source_dir + "*.jack"):
-        print(file)
         compile_file(file)
 
 
