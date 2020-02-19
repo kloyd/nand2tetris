@@ -231,7 +231,13 @@ class JackCompiler:
                     self.compile_class_var_dec("field")
 
                 if self.current_token == "function":
-                    self.compile_subroutine()
+                    self.compile_subroutine("function")
+
+                if self.current_token == "method":
+                    self.compile_subroutine("method")
+
+                if self.current_token == "constructor":
+                    self.compile_subroutine("constructor")
 
                 if self.current_token == 'while':
                     self.compile_while_statement()
@@ -254,15 +260,13 @@ class JackCompiler:
             self.output_tag("    <identifier> " + self.current_token + " </identifier>")
             self.advance()
             if self.current_token == ";":
-                self.output_tag("    <symbol> ; </symbol>")
-                
-                print(self.current_token, self.token_type)
+                self.output_element(4) # self.output_tag("    <symbol> ; </symbol>")
         self.output_tag("  </classVarDec>")
 
-    def compile_subroutine(self):
+    def compile_subroutine(self, subroutine_type):
         self.output_tag("  <subroutineDec>")
         self.output_element(4)
-        self.eat("function")
+        self.eat(subroutine_type)
         self.output_element(4)
         self.advance()
         self.output_element(4)
@@ -272,11 +276,17 @@ class JackCompiler:
             self.output_tag("    <parameterList>")
             # TODO: parameter list elements
             self.output_tag("    </parameterList>")
-            self.output_tag("    <symbol> ) </symbol>")
+            self.output_element(4) #self.output_tag("    <symbol> ) </symbol>")
             self.eat(")")
             self.output_tag("    <subroutineBody>")
             if self.eat("{"):
                 self.output_tag("      <symbol> { </symbol>")
+            while 1:
+                if self.current_token == "}":
+                    break
+                self.advance()
+            self.output_tag("    </subroutineBody>")
+            self.output_tag("  </subroutineDec>")
 
     def compile_parameter_list(self):
         self.output_tag("compile parameter list")

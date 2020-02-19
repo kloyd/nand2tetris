@@ -3,4 +3,6 @@
 *.tst
 *.out
 *.hack
+*.jack
+*.xml
 
