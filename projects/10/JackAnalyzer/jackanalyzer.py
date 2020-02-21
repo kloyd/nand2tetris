@@ -263,6 +263,13 @@ class JackCompiler:
                 self.output_element(4) # self.output_tag("    <symbol> ; </symbol>")
         self.output_tag("  </classVarDec>")
 
+    def compile_var_dec(self):
+        self.output_tag("      <varDec>")
+        self.output_element(6)
+        self.advance()
+        
+        self.output_tag("      </varDec>")
+
     def compile_subroutine(self, subroutine_type):
         self.output_tag("  <subroutineDec>")
         self.output_element(4)
