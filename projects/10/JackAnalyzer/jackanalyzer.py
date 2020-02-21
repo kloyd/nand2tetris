@@ -267,7 +267,12 @@ class JackCompiler:
         self.output_tag("      <varDec>")
         self.output_element(6)
         self.advance()
-        
+        self.output_element(6)
+        self.advance()
+        self.output_element(6)
+        self.advance()
+        self.output_element(6)
+
         self.output_tag("      </varDec>")
 
     def compile_subroutine(self, subroutine_type):
@@ -289,6 +294,12 @@ class JackCompiler:
             if self.eat("{"):
                 self.output_tag("      <symbol> { </symbol>")
             while 1:
+                #print(self.current_token)
+                if self.current_token == "var":
+                    print("var")
+                    self.compile_var_dec()
+                else:
+                    self.compile_statements()
                 if self.current_token == "}":
                     break
                 self.advance()
@@ -302,7 +313,29 @@ class JackCompiler:
         self.output_tag("compile variable declaration")
 
     def compile_statements(self):
-        self.output_tag("compile statements")
+        self.output_tag("      <statements>")
+        if self.current_token == "if":
+            self.compile_if_statement()
+        if self.current_token == "while":
+            self.compile_while_statement()
+        if self.current_token == "let":
+            self.compile_let_statement()
+        if self.current_token == "do":
+            self.compile_do_statement()
+        if self.current_token == "return":
+            self.compile_return_statement()
+
+        self.advance()
+        self.output_tag("      </statements>")
+
+    def compile_do_statement(self):
+        self.output_tag("do statement")
+
+    def compile_return_statement(self):
+        self.output_tag("return statement")
+
+    def compile_let_statement(self):
+        self.output_tag("let statement")
 
     def compile_if_statement(self):
         self.output_tag("compile if statement")
