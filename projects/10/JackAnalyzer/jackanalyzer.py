@@ -182,6 +182,8 @@ class JackTokenizer:
 
 class JackCompiler:
 
+    statement_list = ['if', 'let', 'while', 'return','do']
+
     def __init__(self, tokenizer, source_file):
         self.tokenizer = tokenizer
         self.token_type = ""
@@ -198,20 +200,23 @@ class JackCompiler:
     def compile_term(self):
         if self.token_type != "symbol":
             self.output_tag("<term>")
-            self.output_tag(self.current_token)
+            self.output_element(10)
             self.eat(self.current_token)
-            self.output_tag("<term>")
+            self.output_tag("</term>")
 
     def compile_expression(self):
         self.output_tag("<expression>")
         self.compile_term()
-        self.advance()
-        if self.token_type == "symbol":
+        self.output_element(20)
+        #self.advance()
+        if self.token_type == "symbol" and self.current_token != ")":
             self.output_tag("<symbol>" + self.current_token + "</symbol>")
             self.eat(self.current_token)
             self.compile_term()
         self.output_tag("</expression>")
 
+    # TODO - Use a depth counter to keep track of indentation.
+    # use depth counter to set spaces for all tags.
     def compile_class(self):
         self.output_tag("<class>")
         self.output_tag("  <" + self.token_type + "> class </" + self.token_type + ">")
@@ -250,28 +255,38 @@ class JackCompiler:
 
     def compile_class_var_dec(self, var_type):
         self.output_tag("  <classVarDec>")
-        #self.output_tag("    <keyword> " + var_type + " </keyword>")
+        # static / field
         self.output_element(4)
         self.eat(var_type)
+        # type def
         self.output_element(4)
-        #self.output_tag("    <keyword> " + self.current_token + " </keyword>")
         self.advance()
+        # identifier for variable
         if self.token_type == "identifier":
             self.output_tag("    <identifier> " + self.current_token + " </identifier>")
             self.advance()
+            # close it... no allowance for multiples yet.
             if self.current_token == ";":
                 self.output_element(4) # self.output_tag("    <symbol> ; </symbol>")
         self.output_tag("  </classVarDec>")
 
     def compile_var_dec(self):
         self.output_tag("      <varDec>")
+        # var
         self.output_element(6)
         self.advance()
+        # type
         self.output_element(6)
         self.advance()
-        self.output_element(6)
-        self.advance()
-        self.output_element(6)
+        # go until ; symbol.
+        while self.current_token != ";":
+            # variable name.
+            self.output_element(6)
+            self.advance()
+            # could be comma or semicolon.
+            self.output_element(6)
+            if self.current_token == ",":
+                self.advance()
 
         self.output_tag("      </varDec>")
 
@@ -294,9 +309,7 @@ class JackCompiler:
             if self.eat("{"):
                 self.output_tag("      <symbol> { </symbol>")
             while 1:
-                #print(self.current_token)
                 if self.current_token == "var":
-                    print("var")
                     self.compile_var_dec()
                 else:
                     self.compile_statements()
@@ -309,51 +322,83 @@ class JackCompiler:
     def compile_parameter_list(self):
         self.output_tag("compile parameter list")
 
-    def compile_var_dec(self):
-        self.output_tag("compile variable declaration")
 
     def compile_statements(self):
         self.output_tag("      <statements>")
-        if self.current_token == "if":
-            self.compile_if_statement()
-        if self.current_token == "while":
-            self.compile_while_statement()
-        if self.current_token == "let":
-            self.compile_let_statement()
-        if self.current_token == "do":
-            self.compile_do_statement()
-        if self.current_token == "return":
-            self.compile_return_statement()
+        while self.current_token in self.statement_list:
+            if self.current_token == "if":
+                self.compile_if_statement()
+            if self.current_token == "while":
+                self.compile_while_statement()
+            if self.current_token == "let":
+                self.compile_let_statement()
+            if self.current_token == "do":
+                self.compile_do_statement()
+            if self.current_token == "return":
+                self.compile_return_statement()
 
-        self.advance()
-        self.output_tag("      </statements>")
+            self.advance()
+        self.output_tag("     </statements>")
 
     def compile_do_statement(self):
-        self.output_tag("do statement")
+        self.output_tag("        <doStatement>")
+        self.output_tag("          <keyword> do </keyword>")
+        while self.current_token != ";":
+            self.advance()
+        self.output_element(10)
+        self.output_tag("        </doStatement>")
 
     def compile_return_statement(self):
-        self.output_tag("return statement")
+        self.output_tag("        <returnStatement>")
+        self.output_tag("          <keyword> return </keyword>")
+        while self.current_token != ";":
+            self.advance()
+        self.output_element(10)
+        self.output_tag("        </returnStatement>")
 
     def compile_let_statement(self):
-        self.output_tag("let statement")
+        self.output_tag("        <letStatement>")
+        self.output_tag("          <keyword> let </keyword>")
+        while self.current_token != ";":
+            self.advance()
+        self.output_element(10)
+        self.output_tag("        </letStatement>")
+
 
     def compile_if_statement(self):
-        self.output_tag("compile if statement")
+        # if (expr) { statement(s) } [ else { statement(s) }
+        self.output_tag("        <ifStatement>")
+        self.output_tag("          <keyword> if </keyword>")
+        # get first clause
+        self.eat("if")
+        while self.current_token != "}":
+            self.output_element(8)
+            self.advance()
+            self.compile_expression()
+            if self.current_token == "else":
+                self.output_element(10)
+                self.advance()
+                self.output_element(10)
+                self.compile_expression()
+
+            self.advance()
+        self.output_element(10)
+        self.output_tag("        </ifStatement>")
 
     def compile_while_statement(self):
         if self.eat('while'):
-            self.output_tag("<whileStatement>")
-            self.output_tag("<keyword> while </keyword")
+            self.output_tag("        <whileStatement>")
+            self.output_tag("          <keyword> while </keyword")
         else:
             print("Error processing while statement>> while", self.current_token)
             exit(-1)
         if self.eat('('):
-            self.output_tag("<symbol> ( </symbol>")
+            self.output_tag("           <symbol> ( </symbol>")
         else:
             print("Error processing while statement >> while", self.current_token)
             exit(-1)
         self.compile_expression()
-        self.output_tag("</whileStatement>")
+        self.output_tag("        </whileStatement>")
 
     def advance(self):
         if self.tokenizer.has_more_tokens():
@@ -373,7 +418,7 @@ class JackCompiler:
     def output_tag(self, element):
         self.output_file.write(element)
         self.output_file.write("\n")
-        #print(element)
+        print(element)
 
     def output_element(self, depth):
         output_string = depth*" " + "<" + self.token_type + "> " + self.current_token + " </" + self.token_type + ">"
@@ -388,7 +433,7 @@ if len(sys.argv) != 2:
 
 def compile_file(source_file):
     tokenizer = JackTokenizer(source_file)
-    print("Compiling " + source_file + " ...")
+    print("Compiling " + source_file + " ...\n\n")
     compiler = JackCompiler(tokenizer, source_file)
     compiler.run()
 
