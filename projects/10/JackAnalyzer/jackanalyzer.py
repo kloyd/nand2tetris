@@ -211,27 +211,66 @@ class JackCompiler:
 
     def compile_term(self):
         if self.token_type != "symbol":
-            self.increase_indent()
+            # term = varName | constant
+            # varName = simplevar
+            # varName = class.method(expr)
             self.output_tag("<term>")
+            self.increase_indent()
+            # output identifier
             self.output_element()
-            self.eat(self.current_token)
-            self.output_tag("</term>")
+            self.advance()
+            # got a '.' ??? if so, it's an object var with method call.
+            if self.current_token == ".":
+                # handle method
+                self.output_element()
+                self.advance()
+                # method
+                self.output_element()
+                self.advance()
+                # (
+                #self.output_tag("*** ( *** ")
+                self.output_element()
+                self.advance()
+                self.compile_expression_list()
+                self.output_element()
+                # move past )
+                self.advance()
             self.decrease_indent()
+            self.output_tag("</term>")
+
+    def compile_expression_list(self):
+        self.output_tag("<expressionList>")
+        self.increase_indent()
+        while self.current_token != ")":
+            self.compile_expression()
+            self.advance()
+        self.decrease_indent()
+        self.output_tag("</expressionList>")
+
+
+
 
     def compile_expression(self):
-        self.increase_indent()
+
         self.output_tag("<expression>")
+        self.increase_indent()
         self.compile_term()
-        self.output_element()
-        #self.advance()
-        if self.token_type == "symbol" and self.current_token != ")":
+        #self.output_element()
+        # could be ';' or ')'
+        if self.current_token != ";":
             self.increase_indent()
-            self.output_tag("<symbol>" + self.current_token + "</symbol>")
-            self.eat(self.current_token)
+            self.output_element()
+            self.advance()
             self.compile_term()
             self.decrease_indent()
-        self.output_tag("</expression>")
+
         self.decrease_indent()
+        self.output_tag("</expression>")
+        self.output_element()
+        # move past ';'
+        self.advance()
+
+
 
     # TODO - Use a depth counter to keep track of indentation.
     # use depth counter to set spaces for all tags.
@@ -350,7 +389,6 @@ class JackCompiler:
     def compile_parameter_list(self):
         self.output_tag("compile parameter list")
 
-
     def compile_statements(self):
         self.output_tag("<statements>")
         self.increase_indent()
@@ -372,28 +410,39 @@ class JackCompiler:
 
     def compile_do_statement(self):
         self.output_tag("<doStatement>")
+        self.increase_indent()
         self.output_tag("<keyword> do </keyword>")
         while self.current_token != ";":
             self.advance()
         self.output_element()
+        self.decrease_indent()
         self.output_tag("</doStatement>")
 
     def compile_return_statement(self):
         self.output_tag("<returnStatement>")
+        self.increase_indent()
         self.output_tag("<keyword> return </keyword>")
         while self.current_token != ";":
             self.advance()
         self.output_element()
+        self.decrease_indent()
         self.output_tag("</returnStatement>")
 
     def compile_let_statement(self):
         self.output_tag("<letStatement>")
-        self.output_tag("<keyword> let </keyword>")
-        while self.current_token != ";":
-            self.advance()
+        self.increase_indent()
+        # let identifier = expr;
         self.output_element()
-        self.output_tag("</letStatement>")
+        self.eat("let")
+        self.output_element()
+        self.advance()
+        self.output_element()
+        self.eat("=")
+        self.compile_expression()
 
+        #self.output_element()
+        self.decrease_indent()
+        self.output_tag("</letStatement>")
 
     def compile_if_statement(self):
         # if (expr) { statement(s) } [ else { statement(s) }
