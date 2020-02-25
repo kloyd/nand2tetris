@@ -184,7 +184,7 @@ class JackCompiler:
 
     # statement beginning tokens
     statement_list = ['if', 'let', 'while', 'return','do']
-    # indentation for xml ouptut. should go up when adding new element and down when done with element.
+    # indentation for xml output. should go up when adding new element and down when done with element.
     indent_depth = 0
 
     def __init__(self, tokenizer, source_file):
@@ -209,6 +209,16 @@ class JackCompiler:
         if self.indent_depth < 0:
             self.indent_depth = 0
 
+    def expect_token(self, check_token):
+        if check_token != self.current_token:
+            print("Compile Error: Expected token '" + check_token + "', but got '" + self.current_token + "'")
+            exit(-1)
+
+    def expects_type(self, token_type):
+        if token_type != self.token_type:
+            print("Compile Error: Expected token of type '" + token_type + "', but got '" + self.token_type + "'")
+            exit(-1)
+
     def compile_term(self):
         if self.token_type != "symbol":
             # term = varName | constant
@@ -217,6 +227,7 @@ class JackCompiler:
             self.output_tag("<term>")
             self.increase_indent()
             # output identifier
+            #self.expects_type("identifier")
             self.output_element()
             self.advance()
             # got a '.' ??? if so, it's an object var with method call.
@@ -247,9 +258,6 @@ class JackCompiler:
         self.decrease_indent()
         self.output_tag("</expressionList>")
 
-
-
-
     def compile_expression(self):
 
         self.output_tag("<expression>")
@@ -270,10 +278,6 @@ class JackCompiler:
         # move past ';'
         self.advance()
 
-
-
-    # TODO - Use a depth counter to keep track of indentation.
-    # use depth counter to set spaces for all tags.
     def compile_class(self):
         self.output_tag("<class>")
         self.increase_indent()
@@ -412,6 +416,7 @@ class JackCompiler:
         self.output_tag("<doStatement>")
         self.increase_indent()
         self.output_tag("<keyword> do </keyword>")
+        self.compile_expression()
         while self.current_token != ";":
             self.advance()
         self.output_element()
@@ -439,8 +444,6 @@ class JackCompiler:
         self.output_element()
         self.eat("=")
         self.compile_expression()
-
-        #self.output_element()
         self.decrease_indent()
         self.output_tag("</letStatement>")
 
