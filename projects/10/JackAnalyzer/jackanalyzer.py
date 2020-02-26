@@ -50,9 +50,9 @@ class JackTokenizer:
             output_file.write('<identifier> {0} </identifier>\n'.format(token))
         if token_type == 'symbol':
             output_file.write('<symbol> {0} </symbol>\n'.format(token))
-        if token_type == 'string_constant':
+        if token_type == 'stringConstant':
             output_file.write('<stringConstant> {0} </stringConstant>\n'.format(token))
-        if token_type == 'int_constant':
+        if token_type == 'integerConstant':
             output_file.write('<integerConstant> {0} </integerConstant>\n'.format(token))
 
     def parse_tokens(self, line):
@@ -154,7 +154,7 @@ class JackTokenizer:
             # > needs to be &gt; for XML/Web
             give_token = '&gt;'
         self.token_position = self.token_position + 1
-        if token_type == "string_constant":
+        if token_type == "stringConstant":
             return give_token[1:], token_type
         else:
             return give_token, token_type
@@ -169,13 +169,13 @@ class JackTokenizer:
             #print(token, "keyword")
             return "keyword"
         if '"' in token:
-            return "string_constant"
+            return "stringConstant"
         try:
             test_value = int(token)
         except ValueError:
             test_value = 99999
         if test_value < 99999:
-            return "int_constant"
+            return "integerConstant"
 
         return "identifier"
 
@@ -222,14 +222,11 @@ class JackCompiler:
 
     def compile_term(self):
         if self.token_type != "symbol":
-            # term = varName | constant
+            # term = varName | constant | varName '[' expr ']'
             # varName = simplevar
             # varName = class.method(expr)
             self.output_tag("<term>")
             self.increase_indent()
-            # output identifier
-            # ** refactor into term_expression?
-            #self.expects_type("identifier")
             self.term_expression()
             self.decrease_indent()
             self.output_tag("</term>")
@@ -259,6 +256,8 @@ class JackCompiler:
             # move past )
             self.advance()
         # ** end refactor
+        if self.current_token == '[':
+            self.compile_array_sub()
 
     def compile_expression_list(self):
         self.output_tag("<expressionList>")
@@ -449,19 +448,44 @@ class JackCompiler:
         self.output_tag("</returnStatement>")
 
     def compile_let_statement(self):
+        """
+        'let' varName('[' expression '])? '=' expression ';'
+        term = varName | varName '[' expression ']'
+        :return:
+        """
         self.output_tag("<letStatement>")
         self.increase_indent()
-        # let identifier = expr;
+        # output 'let'
         self.output_element()
         self.eat("let")
+        # output varName
+        # should be output_term?
         self.output_element()
         self.advance()
+        # this could be '=' or '['
+
+        if self.current_token == '[':
+            self.compile_array_sub()
+
         self.output_element()
         self.eat("=")
         self.compile_expression()
         self.output_element()
         self.decrease_indent()
         self.output_tag("</letStatement>")
+
+    def compile_array_sub(self):
+        # output [
+        self.output_element()
+        self.advance()
+        # do the expression in []
+        self.compile_expression()
+        # output ']'
+        self.output_element()
+        self.advance()
+        self.output_element()
+        # move up to = sign.
+        self.advance()
 
     def compile_if_statement(self):
         # if (expr) { statement(s) } [ else { statement(s) }
