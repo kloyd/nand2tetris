@@ -227,6 +227,7 @@ class JackCompiler:
             self.output_tag("<term>")
             self.increase_indent()
             # output identifier
+            # ** refactor into term_expression?
             #self.expects_type("identifier")
             self.output_element()
             self.advance()
@@ -246,6 +247,7 @@ class JackCompiler:
                 self.output_element()
                 # move past )
                 self.advance()
+            # ** end refactor
             self.decrease_indent()
             self.output_tag("</term>")
 
