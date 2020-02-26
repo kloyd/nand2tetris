@@ -183,7 +183,8 @@ class JackTokenizer:
 class JackCompiler:
 
     # statement beginning tokens
-    statement_list = ['if', 'let', 'while', 'return','do']
+    statement_list = ['if', 'let', 'while', 'return', 'do']
+    operator_list = ['+', '-', '*', '/', '&', '|', '<', '>', '=', '-', '~', '=']
     # indentation for xml output. should go up when adding new element and down when done with element.
     indent_depth = 0
 
@@ -229,27 +230,35 @@ class JackCompiler:
             # output identifier
             # ** refactor into term_expression?
             #self.expects_type("identifier")
-            self.output_element()
-            self.advance()
-            # got a '.' ??? if so, it's an object var with method call.
-            if self.current_token == ".":
-                # handle method
-                self.output_element()
-                self.advance()
-                # method
-                self.output_element()
-                self.advance()
-                # (
-                #self.output_tag("*** ( *** ")
-                self.output_element()
-                self.advance()
-                self.compile_expression_list()
-                self.output_element()
-                # move past )
-                self.advance()
-            # ** end refactor
+            self.term_expression()
             self.decrease_indent()
             self.output_tag("</term>")
+
+    def term_expression(self):
+        """
+        The inner part of a term expression.
+        Also usable from the "do" compile as a do can be do <identifier>.<identifier>(<expressionlist>);
+        Or do <identifier>(<expressionlist>);
+        """
+        self.output_element()
+        self.advance()
+        # got a '.' ??? if so, it's an object var with method call.
+        if self.current_token == ".":
+            # handle method
+            self.output_element()
+            self.advance()
+            # method
+            self.output_element()
+            self.advance()
+            # (
+            # self.output_tag("*** ( *** ")
+            self.output_element()
+            self.advance()
+            self.compile_expression_list()
+            self.output_element()
+            # move past )
+            self.advance()
+        # ** end refactor
 
     def compile_expression_list(self):
         self.output_tag("<expressionList>")
@@ -261,13 +270,13 @@ class JackCompiler:
         self.output_tag("</expressionList>")
 
     def compile_expression(self):
-
+        # expression: term ( op term)
+        # first term is mandatory. once first term compiled, look for op.
         self.output_tag("<expression>")
         self.increase_indent()
         self.compile_term()
-        #self.output_element()
-        # could be ';' or ')'
-        if self.current_token != ";":
+        # term is done, look for operator.
+        if self.current_token in self.operator_list:
             self.increase_indent()
             self.output_element()
             self.advance()
@@ -276,9 +285,9 @@ class JackCompiler:
 
         self.decrease_indent()
         self.output_tag("</expression>")
-        self.output_element()
+        #self.output_element()
         # move past ';'
-        self.advance()
+        #self.advance()
 
     def compile_class(self):
         self.output_tag("<class>")
@@ -387,6 +396,8 @@ class JackCompiler:
                 if self.current_token == "}":
                     break
                 self.advance()
+            # have arrived at closing brace '}'
+            self.output_element()
             self.decrease_indent()
             self.output_tag("</subroutineBody>")
             self.decrease_indent()
@@ -418,7 +429,9 @@ class JackCompiler:
         self.output_tag("<doStatement>")
         self.increase_indent()
         self.output_tag("<keyword> do </keyword>")
-        self.compile_expression()
+        #self.compile_expression()
+        self.advance()
+        self.term_expression()
         while self.current_token != ";":
             self.advance()
         self.output_element()
@@ -446,19 +459,34 @@ class JackCompiler:
         self.output_element()
         self.eat("=")
         self.compile_expression()
+        self.output_element()
         self.decrease_indent()
         self.output_tag("</letStatement>")
 
     def compile_if_statement(self):
         # if (expr) { statement(s) } [ else { statement(s) }
         self.output_tag("<ifStatement>")
+        self.increase_indent()
         self.output_tag("<keyword> if </keyword>")
         # get first clause
-        self.eat("if")
-        while self.current_token != "}":
+        self.advance()
+        # '(' <expr> ')'
+        self.output_element()
+        self.advance() # move past (
+        self.compile_expression()
+        #self.output_tag("compile expression done")
+        self.output_element()
+        #self.output_tag("if expression done.")
+        self.advance()          # move past )
+        self.output_element()   # write out {
+        self.advance()      # move up
+        self.compile_statements()   # do the statements.
+        while False: #self.current_token != "}":
             self.output_element()
             self.advance()
             self.compile_expression()
+            #self.output_tag("if expression done.")
+            self.output_element()
             if self.current_token == "else":
                 self.output_element()
                 self.advance()
@@ -467,6 +495,7 @@ class JackCompiler:
 
             self.advance()
         self.output_element()
+        self.decrease_indent()
         self.output_tag("</ifStatement>")
 
     def compile_while_statement(self):
