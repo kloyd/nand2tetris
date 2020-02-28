@@ -276,8 +276,9 @@ class JackCompiler:
         self.compile_term()
         # term is done, look for operator.
         if self.current_token in self.operator_list:
-            self.increase_indent()
+
             self.output_element()
+            self.increase_indent()
             self.advance()
             self.compile_term()
             self.decrease_indent()
@@ -502,26 +503,27 @@ class JackCompiler:
         self.output_element()
         self.advance() # move past (
         self.compile_expression()
-        #self.output_tag("compile expression done")
         self.output_element()
         #self.output_tag("if expression done.")
         self.advance()          # move past )
         self.output_element()   # write out {
         self.advance()      # move up
         self.compile_statements()   # do the statements.
-        while False: #self.current_token != "}":
+        # current token should be '}'
+        self.expect_token('}')
+        # move past }, check for else
+        self.output_element()
+        self.advance()
+        if self.current_token == "else":
             self.output_element()
             self.advance()
-            self.compile_expression()
-            #self.output_tag("if expression done.")
+            #self.output_tag("first part of if clause, current token: " + self.current_token)
             self.output_element()
-            if self.current_token == "else":
-                self.output_element()
-                self.advance()
-                self.output_element()
-                self.compile_expression()
-
             self.advance()
+            self.compile_statements()
+            self.output_tag("after else statements")
+            self.advance()
+        # output '}'
         self.output_element()
         self.decrease_indent()
         self.output_tag("</ifStatement>")
