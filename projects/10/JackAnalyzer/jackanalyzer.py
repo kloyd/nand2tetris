@@ -467,8 +467,11 @@ class JackCompiler:
         if self.current_token == '[':
             self.compile_array_sub()
 
+        #self.output_tag("Current token " + self.current_token)
         self.output_element()
-        self.eat("=")
+        self.expect_token("=")
+        self.advance()
+        #self.output_tag("after equals, before expression " + self.current_token)
         self.compile_expression()
         self.output_element()
         self.decrease_indent()
@@ -483,9 +486,10 @@ class JackCompiler:
         # output ']'
         self.output_element()
         self.advance()
-        self.output_element()
+        #self.output_element()
+        #self.output_tag("compile_array_sub current token " + self.current_token)
         # move up to = sign.
-        self.advance()
+        #self.advance()
 
     def compile_if_statement(self):
         # if (expr) { statement(s) } [ else { statement(s) }
