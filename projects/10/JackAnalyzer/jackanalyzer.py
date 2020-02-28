@@ -221,15 +221,44 @@ class JackCompiler:
             exit(-1)
 
     def compile_term(self):
-        if self.token_type != "symbol":
-            # term = varName | constant | varName '[' expr ']'
-            # varName = simplevar
-            # varName = class.method(expr)
-            self.output_tag("<term>")
-            self.increase_indent()
-            self.term_expression()
-            self.decrease_indent()
-            self.output_tag("</term>")
+        """
+        term := integerConstant | stringConstant | keywordConstant |
+            varName | varName '[' expression ']' | subroutineCall |
+            '(' expression ')' | unaryOp term
+        :return:
+        """
+        self.output_tag("<term>")
+        self.increase_indent()
+        if self.token_type == "integerConstant" or self == "stringConstant":
+            self.output_element()
+            self.advance()
+        else:
+            if self.token_type != "symbol":
+                # term = varName | constant | varName '[' expr ']'
+                # varName = simplevar
+                # varName = class.method(expr)
+                #self.increase_indent()
+                self.term_expression()
+            else:
+                if self.current_token == '(':
+                    # handle '(' expression ')'
+                    #self.increase_indent()
+                    self.output_element()
+                    self.advance()
+                    self.compile_expression()
+                    self.output_element()
+                    self.advance()
+                    #self.decrease_indent()
+                else:
+                    if self.current_token == '-' or self.current_token == '~':
+                        # handle unaryOp
+                        # unaryOp term
+                        self.output_element()
+                        self.advance()
+                        self.compile_term()
+
+        self.decrease_indent()
+        self.output_tag("</term>")
 
     def term_expression(self):
         """
@@ -278,16 +307,12 @@ class JackCompiler:
         if self.current_token in self.operator_list:
 
             self.output_element()
-            self.increase_indent()
             self.advance()
             self.compile_term()
-            self.decrease_indent()
 
         self.decrease_indent()
         self.output_tag("</expression>")
-        #self.output_element()
-        # move past ';'
-        #self.advance()
+
 
     def compile_class(self):
         self.output_tag("<class>")
