@@ -313,7 +313,6 @@ class JackCompiler:
         self.decrease_indent()
         self.output_tag("</expression>")
 
-
     def compile_class(self):
         self.output_tag("<class>")
         self.increase_indent()
@@ -405,7 +404,7 @@ class JackCompiler:
         if self.eat("("):
             self.output_tag("<symbol> ( </symbol>")
             self.output_tag("<parameterList>")
-            # TODO: parameter list elements
+            self.compile_parameter_list()
             self.output_tag("</parameterList>")
             self.output_element()  #self.output_tag("<symbol> ) </symbol>")
             self.eat(")")
@@ -546,8 +545,7 @@ class JackCompiler:
             self.output_element()
             self.advance()
             self.compile_statements()
-            self.output_tag("after else statements")
-            self.advance()
+            #self.advance()
         # output '}'
         self.output_element()
         self.decrease_indent()
