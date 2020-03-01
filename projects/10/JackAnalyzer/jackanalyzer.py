@@ -192,7 +192,8 @@ class JackCompiler:
 
     # statement beginning tokens
     statement_list = ['if', 'let', 'while', 'return', 'do']
-    operator_list = ['+', '-', '*', '/', '&', '|', '<', '>', '=', '-', '~', '=']
+    operator_list = ['+', '-', '*', '/', '&', '|', '<', '>', '=', '-', '~', '=', '&lt;', '&gt;', '&amp;']
+    type_list = ['int', 'char', 'boolean']
     # indentation for xml output. should go up when adding new element and down when done with element.
     indent_depth = 0
 
@@ -293,6 +294,12 @@ class JackCompiler:
             # move past )
             self.advance()
         # ** end refactor
+        if self.current_token == '(':
+            # <identifier> '(' expressionList ')'
+            self.output_element()
+            self.advance()
+            self.compile_expression_list()
+            self.output_element()
         if self.current_token == '[':
             self.compile_array_sub()
 
@@ -363,11 +370,16 @@ class JackCompiler:
         self.output_tag("</class>")
 
     def compile_class_var_dec(self, var_type):
+        """
+        static type varName |, varName|* ;
+        field type varName |, varName|* ;
+        """
         self.output_tag("<classVarDec>")
         self.increase_indent()
         # static / field
         self.output_element()
-        self.eat(var_type)
+        self.expect_token(var_type)
+        self.advance()
         # type def
         self.output_element()
         self.advance()
@@ -375,9 +387,18 @@ class JackCompiler:
         if self.token_type == "identifier":
             self.output_tag("<identifier> " + self.current_token + " </identifier>")
             self.advance()
-            # close it... no allowance for multiples yet.
-            if self.current_token == ";":
-                self.output_element()  # self.output_tag("<symbol> ; </symbol>")
+            # if followed by ',' - it is another variable of the same type.
+            # go until ; symbol.
+            self.output_element()
+            while self.current_token != ";":
+                self.advance()
+                # variable name
+                self.output_element()
+                self.advance()
+                # could be comma or semicolon.
+                self.output_element()
+                if self.current_token == ",":
+                    self.advance()
         self.decrease_indent()
         self.output_tag("</classVarDec>")
 
@@ -439,7 +460,29 @@ class JackCompiler:
             self.output_tag("</subroutineDec>")
 
     def compile_parameter_list(self):
-        self.output_tag("parameter list")
+        """
+        parameter list = type varName |, type varName | *
+        :return:
+        """
+        if self.token_type == 'keyword':
+            self.increase_indent()
+            # type
+            self.output_element()
+            self.advance()
+            # varName
+            self.output_element()
+            self.advance()
+            while self.current_token == ',':
+                # symbol ,
+                self.output_element()
+                self.advance()
+                # type
+                self.output_element()
+                self.advance()
+                # varName
+                self.output_element()
+                self.advance()
+            self.decrease_indent()
 
     def compile_statements(self):
         self.output_tag("<statements>")
@@ -463,8 +506,7 @@ class JackCompiler:
     def compile_do_statement(self):
         self.output_tag("<doStatement>")
         self.increase_indent()
-        self.output_tag("<keyword> do </keyword>")
-        #self.compile_expression()
+        self.output_element()
         self.advance()
         self.term_expression()
         while self.current_token != ";":
