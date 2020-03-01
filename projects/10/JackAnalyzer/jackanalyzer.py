@@ -141,6 +141,14 @@ class JackTokenizer:
         else:
             return False
 
+    def look_ahead(self):
+        next_pos = self.token_position
+        if next_pos < len(self.token_list):
+            # there is one more.
+            return self.token_list[next_pos]
+        else:
+            return "None"
+
     def advance(self):
         give_token = self.token_list[self.token_position]
         token_type = self.token_type[self.token_position]
@@ -293,7 +301,10 @@ class JackCompiler:
         self.increase_indent()
         while self.current_token != ")":
             self.compile_expression()
-            self.advance()
+            #self.output_tag("current token: " + self.current_token)
+            if self.current_token == ',':
+                self.output_element()
+                self.advance()
         self.decrease_indent()
         self.output_tag("</expressionList>")
 
@@ -428,7 +439,7 @@ class JackCompiler:
             self.output_tag("</subroutineDec>")
 
     def compile_parameter_list(self):
-        self.output_tag("compile parameter list")
+        self.output_tag("parameter list")
 
     def compile_statements(self):
         self.output_tag("<statements>")
@@ -466,8 +477,10 @@ class JackCompiler:
         self.output_tag("<returnStatement>")
         self.increase_indent()
         self.output_tag("<keyword> return </keyword>")
+        self.advance()
         while self.current_token != ";":
-            self.advance()
+            self.compile_expression()
+            #self.advance()
         self.output_element()
         self.decrease_indent()
         self.output_tag("</returnStatement>")
@@ -535,35 +548,44 @@ class JackCompiler:
         self.compile_statements()   # do the statements.
         # current token should be '}'
         self.expect_token('}')
-        # move past }, check for else
         self.output_element()
-        self.advance()
-        if self.current_token == "else":
-            self.output_element()
+        if self.look_ahead() == "else":
+            # move past '}'
             self.advance()
-            #self.output_tag("first part of if clause, current token: " + self.current_token)
+            # ouput else
             self.output_element()
+            # output {
+            self.advance()
+            self.output_element()
+            #  move on to statement(s)
             self.advance()
             self.compile_statements()
-            #self.advance()
+            # compile_statements will leave the token pointer at '}'
+            self.output_element()
         # output '}'
-        self.output_element()
+        #self.output_tag("after else clause")
+        #self.output_element()
         self.decrease_indent()
         self.output_tag("</ifStatement>")
 
     def compile_while_statement(self):
-        if self.eat('while'):
-            self.output_tag("<whileStatement>")
-            self.output_tag("<keyword> while </keyword")
-        else:
-            print("Error processing while statement>> while", self.current_token)
-            exit(-1)
-        if self.eat('('):
-            self.output_tag("<symbol> ( </symbol>")
-        else:
-            print("Error processing while statement >> while", self.current_token)
-            exit(-1)
+        self.expect_token('while')
+        self.output_tag("<whileStatement>")
+        self.increase_indent()
+        self.output_element()
+        self.advance()
+        self.output_element()
+        self.advance()
         self.compile_expression()
+        # handle )
+        self.expect_token(')')
+        self.output_element()
+        self.advance()
+        self.output_element()
+        self.advance()
+        self.compile_statements()
+        self.output_element()
+        self.decrease_indent()
         self.output_tag("</whileStatement>")
 
     def advance(self):
@@ -572,6 +594,9 @@ class JackCompiler:
             return True
         else:
             return False
+
+    def look_ahead(self):
+        return self.tokenizer.look_ahead()
 
     def eat(self, test_token):
         if self.current_token == test_token:
@@ -590,7 +615,6 @@ class JackCompiler:
     def output_element(self):
         output_string = "<" + self.token_type + "> " + self.current_token + " </" + self.token_type + ">"
         self.output_tag(output_string)
-
 
 # Main program.
 if len(sys.argv) != 2:
