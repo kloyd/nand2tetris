@@ -8,7 +8,7 @@ class JackTokenizer:
     keyword_list = ['class', 'constructor', 'method', 'function', 'field', 'static', 'var', 'int', 'char', 'boolean',
                     'void', 'true', 'false', 'null', 'this', 'let', 'do', 'if', 'else', 'while', 'return']
     symbols_list = ['{', '}', '(', ')', '[', ']', '.', ',', ';', '+', '-', '*', '/', '&', '|', '<', '>', '=', '-', '~']
-    letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ?:'
     digits = '0123456789'
     whitespaces = ' \r\n\t'
     token_list = []
@@ -83,7 +83,7 @@ class JackTokenizer:
             if self.is_alpha(c) | self.is_digit(c):
                 current_token = current_token + c
 
-            if self.is_symbol(c):
+            if self.is_symbol(c) and not in_quoted_string:
                 if len(current_token) > 0:
                     self.add_token(current_token)
                 current_token = c
@@ -652,7 +652,7 @@ class JackCompiler:
         output_string = self.indent_depth * " " + element
         self.output_file.write(output_string)
         self.output_file.write("\n")
-        print(output_string)
+        #print(output_string)
 
     def output_element(self):
         output_string = "<" + self.token_type + "> " + self.current_token + " </" + self.token_type + ">"
@@ -672,7 +672,7 @@ def compile_file(source_file):
 
 
 def compile_directory(source_dir):
-    for file in glob.glob(source_dir + "*.jack"):
+    for file in glob.glob(source_dir + "/*.jack"):
         compile_file(file)
 
 
