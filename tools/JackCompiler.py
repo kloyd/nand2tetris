@@ -17,8 +17,8 @@ class JackTokenizer:
 
     def __init__(self, filename):
         input_file = open(filename, 'r')
-        output_filename = filename.split('.')[0] + "T.xml"
-        output_file = open(output_filename, 'w')
+        #output_filename = filename.split('.')[0] + "T.xml"
+        #output_file = open(output_filename, 'w')
         current_token = ""
         self.token_list = []
         self.token_type = []
@@ -26,7 +26,7 @@ class JackTokenizer:
             self.parse_tokens(line)
         input_file.close()
         self.rewind_token_list()
-        self.save_tokens(output_file)
+        #self.save_tokens(output_file)
 
     def rewind_token_list(self):
         self.token_position = 0
@@ -199,6 +199,7 @@ class JackCompiler:
 
     def __init__(self, tokenizer, source_file):
         self.indent_depth = 0
+        self.class_var_index = 0
         self.tokenizer = tokenizer
         self.token_type = ""
         self.current_token = ""
@@ -374,24 +375,34 @@ class JackCompiler:
         static type varName |, varName|* ;
         field type varName |, varName|* ;
         """
+
         self.output_tag("<classVarDec>")
         self.increase_indent()
         # static / field
+        var_category = self.current_token
         self.output_element()
         self.expect_token(var_type)
         self.advance()
         # type def
+        var_type = self.current_token
         self.output_element()
         self.advance()
         # identifier for variable
         if self.token_type == "identifier":
+            var_name = self.current_token
             self.output_tag("<identifier> " + self.current_token + " </identifier>")
             self.advance()
             # if followed by ',' - it is another variable of the same type.
             # go until ; symbol.
             self.output_element()
+            # Print symbol table entry
+            print("Class var: " + var_name + ", category: " + var_category + ", type: " + var_type + ", index: ", self.class_var_index)
             while self.current_token != ";":
                 self.advance()
+                var_name = self.current_token
+                self.class_var_index = self.class_var_index + 1
+                print("Class var: " + var_name + ", category: " + var_category + ", type: " + var_type + ", index: ",
+                      self.class_var_index)
                 # variable name
                 self.output_element()
                 self.advance()
@@ -399,6 +410,7 @@ class JackCompiler:
                 self.output_element()
                 if self.current_token == ",":
                     self.advance()
+            self.class_var_index = self.class_var_index + 1
         self.decrease_indent()
         self.output_tag("</classVarDec>")
 
