@@ -17,8 +17,7 @@ class JackTokenizer:
 
     def __init__(self, filename):
         input_file = open(filename, 'r')
-        #output_filename = filename.split('.')[0] + "T.xml"
-        #output_file = open(output_filename, 'w')
+
         current_token = ""
         self.token_list = []
         self.token_type = []
@@ -26,12 +25,14 @@ class JackTokenizer:
             self.parse_tokens(line)
         input_file.close()
         self.rewind_token_list()
-        #self.save_tokens(output_file)
+        #self.save_tokens(filename)
 
     def rewind_token_list(self):
         self.token_position = 0
 
-    def save_tokens(self, output_file):
+    def save_tokens(self, filename):
+        output_filename = filename.split('.')[0] + "T.xml"
+        output_file = open(output_filename, 'w')
         output_file.write('<tokens>\n')
         while self.has_more_tokens():
             token, type  = self.advance()
@@ -187,6 +188,22 @@ class JackTokenizer:
 
         return "identifier"
 
+class Variable:
+    
+    def __init__(self, name, type, position):
+        self.name = name
+        self.type = type
+        self.position = position
+     
+    def type(self):
+        self.type
+        
+    def name(self):
+        self.name
+    
+    def position(self):
+        self.position
+        
 
 class JackCompiler:
 
@@ -332,12 +349,23 @@ class JackCompiler:
         self.decrease_indent()
         self.output_tag("</expression>")
 
+    def clear_class_variables(self):
+        self.statics = {}
+        self.fields = {}
+        
+ 
+    def clear_method_variables(self):
+        self.arguments = {}
+        self.locals = {}
+    
+    
+    
     def compile_class(self):
         self.output_tag("<class>")
         self.increase_indent()
         self.output_tag("<" + self.token_type + "> class </" + self.token_type + ">")
         self.eat("class")
-
+        self.clear_class_variables()
         self.output_tag("<identifier> " + self.current_token + " </identifier>")
         self.advance()
         if self.eat("{"):
@@ -370,50 +398,50 @@ class JackCompiler:
         self.decrease_indent()
         self.output_tag("</class>")
 
+    def add_class_var(self, name, category, type):
+        """
+        static category
+        field category
+        """
+        pos = 0
+        if category == "field":
+            pos = len(self.fields)
+            theVar = Variable(name, type, pos)
+            self.fields[name] = theVar
+        else:
+            pos = len(self.statics)
+            theVar = Variable(name, type, pos)
+            self.statics[name] = theVar
+        print(category + " variable - " + name + ", type: " + type + ", index: ", pos)
+        
+        
     def compile_class_var_dec(self, var_type):
         """
         static type varName |, varName|* ;
         field type varName |, varName|* ;
         """
 
-        self.output_tag("<classVarDec>")
-        self.increase_indent()
         # static / field
         var_category = self.current_token
-        self.output_element()
         self.expect_token(var_type)
         self.advance()
         # type def
         var_type = self.current_token
-        self.output_element()
         self.advance()
         # identifier for variable
         if self.token_type == "identifier":
             var_name = self.current_token
-            self.output_tag("<identifier> " + self.current_token + " </identifier>")
+            self.add_class_var(var_name, var_category, var_type)
             self.advance()
             # if followed by ',' - it is another variable of the same type.
             # go until ; symbol.
-            self.output_element()
-            # Print symbol table entry
-            print("Class var: " + var_name + ", category: " + var_category + ", type: " + var_type + ", index: ", self.class_var_index)
             while self.current_token != ";":
                 self.advance()
-                var_name = self.current_token
-                self.class_var_index = self.class_var_index + 1
-                print("Class var: " + var_name + ", category: " + var_category + ", type: " + var_type + ", index: ",
-                      self.class_var_index)
-                # variable name
-                self.output_element()
-                self.advance()
-                # could be comma or semicolon.
-                self.output_element()
-                if self.current_token == ",":
-                    self.advance()
-            self.class_var_index = self.class_var_index + 1
-        self.decrease_indent()
-        self.output_tag("</classVarDec>")
+                if self.token_type == "identifier":
+                    var_name = self.current_token
+                    self.add_class_var(var_name, var_category, var_type)
 
+            
     def compile_var_dec(self):
         self.output_tag("<varDec>")
         self.increase_indent()
@@ -678,9 +706,10 @@ if len(sys.argv) != 2:
 
 def compile_file(source_file):
     tokenizer = JackTokenizer(source_file)
-    print("Compiling " + source_file + " ...\n\n")
+    print("... compiling " + source_file + " ...\n")
     compiler = JackCompiler(tokenizer, source_file)
     compiler.run()
+    print("\n... done compiling " + source_file + "\n")
 
 
 def compile_directory(source_dir):
