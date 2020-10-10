@@ -352,14 +352,11 @@ class JackCompiler:
     def clear_class_variables(self):
         self.statics = {}
         self.fields = {}
-        
- 
+
     def clear_method_variables(self):
         self.arguments = {}
         self.locals = {}
-    
-    
-    
+
     def compile_class(self):
         self.output_tag("<class>")
         self.increase_indent()
@@ -404,16 +401,33 @@ class JackCompiler:
         field category
         """
         pos = 0
+        the_var = Variable(name, type, pos)
         if category == "field":
             pos = len(self.fields)
-            theVar = Variable(name, type, pos)
-            self.fields[name] = theVar
+            self.fields[name] = the_var
         else:
             pos = len(self.statics)
-            theVar = Variable(name, type, pos)
-            self.statics[name] = theVar
+            self.statics[name] = the_var
         print(category + " variable - " + name + ", type: " + type + ", index: ", pos)
-        
+
+    def add_method_var(self, name, category, type):
+        """
+        argument category
+        local category
+        :param name:
+        :param category:
+        :param type:
+        :return:
+        """
+        pos = 0
+        the_var = Variable(name, type, pos)
+        if category == "argument":
+            pos = len(self.arguments)
+            self.arguments[name] = the_var
+        else:
+            pos = len(self.locals)
+            self.locals[name] = the_var
+        print(category + " variable - " + name + ", type: " + type + ", index: ", pos)
         
     def compile_class_var_dec(self, var_type):
         """
@@ -465,6 +479,8 @@ class JackCompiler:
         self.output_tag("</varDec>")
 
     def compile_subroutine(self, subroutine_type):
+        # clean slate for method vars.
+        self.clear_method_variables()
         self.output_tag("<subroutineDec>")
         self.increase_indent()
         self.output_element()
