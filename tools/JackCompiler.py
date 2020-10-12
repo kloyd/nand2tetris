@@ -190,23 +190,100 @@ class JackTokenizer:
 
 class Variable:
     
-    def __init__(self, name, type, position):
-        self.name = name
-        self.type = type
-        self.position = position
+    def __init__(self, var_name, var_type, index):
+        self.var_name = var_name
+        self.var_type = var_type
+        self.var_index = index
      
-    def type(self):
-        self.type
+    def get_type(self):
+        return self.var_type
         
-    def name(self):
-        self.name
+    def get_name(self):
+        return self.var_name
     
-    def position(self):
-        self.position
-        
+    def get_index(self):
+        return self.var_index
+
+
+class SymbolTable:
+    def __init__(self):
+        self.statics = {}
+        self.fields = {}
+        self.args = {}
+        self.locals ={}
+
+    def start_subroutine(self):
+        self.args = {}
+        self.locals = {}
+
+    def var_count(self, kind):
+        count = 0
+        if kind == "static":
+            count = len(self.statics)
+        if kind == "field":
+            count = len(self.fields)
+        if kind == "argument":
+            count = len(self.args)
+        if kind == "local":
+            count = len(self.locals)
+        return count
+
+    def define_var(self, name, var_type, kind):
+        var_index = self.var_count(kind)
+        the_var = Variable('','',0)
+        if kind == "static":
+            the_var = Variable(name, var_type, var_index)
+            self.statics[name] = the_var
+        if kind == "field":
+            the_var = Variable(name, var_type, var_index)
+            self.fields[name] = the_var
+        if kind == "argument":
+            the_var = Variable(name, var_type, var_index)
+            self.args[name] = the_var
+        if kind == "local":
+            the_var = Variable(name, var_type, var_index)
+            self.locals[name] = the_var
+        print(kind + " variable - " + the_var.get_name() + ", type: " + the_var.get_type() + ", index: ", the_var.get_index())
+
+    def kind_of(self, name):
+        kind = "none"
+        if name in self.locals:
+            kind = "local"
+        if name in self.args:
+            kind = "argument"
+        if name in self.fields:
+            kind = "field"
+        if name in self.statics:
+            kind = "static"
+        return kind
+
+    def type_of(self, name):
+        kind = self.kind_of(name)
+        the_var = Variable('n', 'n', 0)
+        if kind == "local":
+            the_var = self.locals.get(name)
+        if kind == "argument":
+            the_var = self.args.get(name)
+        if kind == "field":
+            the_var = self.fields.get(name)
+        if kind == "static":
+            the_var = self.fields.get(name)
+        return the_var.get_type()
+
+    def index_of(self, name):
+        kind = self.kind_of(name)
+        the_var = Variable('n', 'n', 0)
+        if kind == "local":
+            the_var = self.locals.get(name)
+        if kind == "argument":
+            the_var = self.args.get(name)
+        if kind == "field":
+            the_var = self.fields.get(name)
+        if kind == "static":
+            the_var = self.fields.get(name)
+        return the_var.get_index()
 
 class JackCompiler:
-
     # statement beginning tokens
     statement_list = ['if', 'let', 'while', 'return', 'do']
     operator_list = ['+', '-', '*', '/', '&', '|', '<', '>', '=', '-', '~', '=', '&lt;', '&gt;', '&amp;']
@@ -218,6 +295,7 @@ class JackCompiler:
         self.indent_depth = 0
         self.class_var_index = 0
         self.tokenizer = tokenizer
+        self.symbol_table = SymbolTable()
         self.token_type = ""
         self.current_token = ""
         output_filename = source_file.split('.')[0] + ".xml"
@@ -349,11 +427,8 @@ class JackCompiler:
         self.decrease_indent()
         self.output_tag("</expression>")
 
-    def clear_class_variables(self):
-        self.statics = {}
-        self.fields = {}
-
     def clear_method_variables(self):
+        #print("New Method")
         self.arguments = {}
         self.locals = {}
 
@@ -362,7 +437,7 @@ class JackCompiler:
         self.increase_indent()
         self.output_tag("<" + self.token_type + "> class </" + self.token_type + ">")
         self.eat("class")
-        self.clear_class_variables()
+        self.symbol_table = SymbolTable()
         self.output_tag("<identifier> " + self.current_token + " </identifier>")
         self.advance()
         if self.eat("{"):
@@ -395,20 +470,8 @@ class JackCompiler:
         self.decrease_indent()
         self.output_tag("</class>")
 
-    def add_class_var(self, name, category, type):
-        """
-        static category
-        field category
-        """
-        pos = 0
-        the_var = Variable(name, type, pos)
-        if category == "field":
-            pos = len(self.fields)
-            self.fields[name] = the_var
-        else:
-            pos = len(self.statics)
-            self.statics[name] = the_var
-        print(category + " variable - " + name + ", type: " + type + ", index: ", pos)
+    def add_class_var(self, name, category, var_type):
+        self.symbol_table.define_var(name, var_type, category)
 
     def add_method_var(self, name, category, type):
         """
@@ -428,7 +491,7 @@ class JackCompiler:
             pos = len(self.locals)
             self.locals[name] = the_var
         print(category + " variable - " + name + ", type: " + type + ", index: ", pos)
-        
+
     def compile_class_var_dec(self, var_type):
         """
         static type varName |, varName|* ;
@@ -464,10 +527,13 @@ class JackCompiler:
         self.advance()
         # type
         self.output_element()
+        var_type = self.current_token
         self.advance()
         # go until ; symbol.
         while self.current_token != ";":
             # variable name.
+            if self.token_type == "identifier":
+                self.add_method_var(self.current_token, 'local', var_type)
             self.output_element()
             self.advance()
             # could be comma or semicolon.
