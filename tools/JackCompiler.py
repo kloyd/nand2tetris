@@ -188,6 +188,7 @@ class JackTokenizer:
 
         return "identifier"
 
+
 class Variable:
     
     def __init__(self, var_name, var_type, index):
@@ -243,7 +244,7 @@ class SymbolTable:
         if kind == "local":
             the_var = Variable(name, var_type, var_index)
             self.locals[name] = the_var
-        print(kind + " variable - " + the_var.get_name() + ", type: " + the_var.get_type() + ", index: ", the_var.get_index())
+        #print(kind + " variable - " + the_var.get_name() + ", type: " + the_var.get_type() + ", index: ", the_var.get_index())
 
     def kind_of(self, name):
         kind = "none"
@@ -256,6 +257,13 @@ class SymbolTable:
         if name in self.statics:
             kind = "static"
         return kind
+
+    def exists(self, name):
+        kind = self.kind_of(name)
+        if kind == "none":
+            return False
+        else:
+            return True
 
     def type_of(self, name):
         kind = self.kind_of(name)
@@ -281,7 +289,12 @@ class SymbolTable:
             the_var = self.fields.get(name)
         if kind == "static":
             the_var = self.fields.get(name)
-        return the_var.get_index()
+
+        if the_var is None:
+            return 0
+        else:
+            return the_var.get_index()
+
 
 class JackCompiler:
     # statement beginning tokens
@@ -372,6 +385,11 @@ class JackCompiler:
         Or do <identifier>(<expressionlist>);
         """
         self.output_element()
+        var_name = self.current_token
+        if self.symbol_table.exists(var_name):
+            print("term expression " + var_name + " - push " + self.symbol_table.kind_of(var_name),  self.symbol_table.index_of(var_name))
+        else:
+            self.output_tag("Found a var_name? " + var_name)
         self.advance()
         # got a '.' ??? if so, it's an object var with method call.
         if self.current_token == ".":
@@ -404,7 +422,6 @@ class JackCompiler:
         self.increase_indent()
         while self.current_token != ")":
             self.compile_expression()
-            #self.output_tag("current token: " + self.current_token)
             if self.current_token == ',':
                 self.output_element()
                 self.advance()
@@ -426,11 +443,6 @@ class JackCompiler:
 
         self.decrease_indent()
         self.output_tag("</expression>")
-
-    def clear_method_variables(self):
-        #print("New Method")
-        self.arguments = {}
-        self.locals = {}
 
     def compile_class(self):
         self.output_tag("<class>")
@@ -470,27 +482,19 @@ class JackCompiler:
         self.decrease_indent()
         self.output_tag("</class>")
 
-    def add_class_var(self, name, category, var_type):
-        self.symbol_table.define_var(name, var_type, category)
+    def add_class_var(self, name, var_kind, var_type):
+        self.symbol_table.define_var(name, var_type, var_kind)
 
-    def add_method_var(self, name, category, type):
+    def add_method_var(self, name, var_kind, var_type):
         """
         argument category
         local category
         :param name:
-        :param category:
-        :param type:
+        :param var_kind:
+        :param var_type:
         :return:
         """
-        pos = 0
-        the_var = Variable(name, type, pos)
-        if category == "argument":
-            pos = len(self.arguments)
-            self.arguments[name] = the_var
-        else:
-            pos = len(self.locals)
-            self.locals[name] = the_var
-        print(category + " variable - " + name + ", type: " + type + ", index: ", pos)
+        self.symbol_table.define_var(name, var_type, var_kind)
 
     def compile_class_var_dec(self, var_type):
         """
@@ -518,7 +522,6 @@ class JackCompiler:
                     var_name = self.current_token
                     self.add_class_var(var_name, var_category, var_type)
 
-            
     def compile_var_dec(self):
         self.output_tag("<varDec>")
         self.increase_indent()
@@ -546,7 +549,7 @@ class JackCompiler:
 
     def compile_subroutine(self, subroutine_type):
         # clean slate for method vars.
-        self.clear_method_variables()
+        self.symbol_table.start_subroutine()
         self.output_tag("<subroutineDec>")
         self.increase_indent()
         self.output_element()
@@ -590,18 +593,24 @@ class JackCompiler:
             self.increase_indent()
             # type
             self.output_element()
+            var_type = self.current_token
             self.advance()
             # varName
+            var_name = self.current_token
             self.output_element()
             self.advance()
+            self.add_method_var(var_name, "argument", var_type)
             while self.current_token == ',':
                 # symbol ,
                 self.output_element()
                 self.advance()
                 # type
                 self.output_element()
+                var_type = self.current_token
                 self.advance()
                 # varName
+                var_name = self.current_token
+                self.add_method_var(var_name, "argument", var_type)
                 self.output_element()
                 self.advance()
             self.decrease_indent()
@@ -774,7 +783,6 @@ class JackCompiler:
         output_string = self.indent_depth * " " + element
         self.output_file.write(output_string)
         self.output_file.write("\n")
-        #print(output_string)
 
     def output_element(self):
         output_string = "<" + self.token_type + "> " + self.current_token + " </" + self.token_type + ">"
@@ -791,7 +799,7 @@ def compile_file(source_file):
     print("... compiling " + source_file + " ...\n")
     compiler = JackCompiler(tokenizer, source_file)
     compiler.run()
-    print("\n... done compiling " + source_file + "\n")
+    #print("... done compiling \n")
 
 
 def compile_directory(source_dir):
