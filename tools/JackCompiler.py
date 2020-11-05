@@ -15,9 +15,7 @@ class JackTokenizer:
     token_type = []
     token_position = 0
 
-    def __init__(self, filename):
-        input_file = open(filename, 'r')
-
+    def __init__(self, input_file):
         current_token = ""
         self.token_list = []
         self.token_type = []
@@ -172,10 +170,8 @@ class JackTokenizer:
         test_value = 99999
 
         if token in self.symbols_list:
-            #print(token, "symbol")
             return "symbol"
         if token in self.keyword_list:
-            #print(token, "keyword")
             return "keyword"
         if '"' in token:
             return "stringConstant"
@@ -244,7 +240,7 @@ class SymbolTable:
         if kind == "local":
             the_var = Variable(name, var_type, var_index)
             self.locals[name] = the_var
-        #print(kind + " variable - " + the_var.get_name() + ", type: " + the_var.get_type() + ", index: ", the_var.get_index())
+        # print(kind + " variable - " + the_var.get_name() + ", type: " + the_var.get_type() + ", index: ", the_var.get_index())
 
     def kind_of(self, name):
         kind = "none"
@@ -296,7 +292,49 @@ class SymbolTable:
             return the_var.get_index()
 
 
-class JackCompiler:
+class VMWriter:
+    def __init__(self, output_file):
+        self.vmFile = output_file
+
+    def write_push(self, segment, index):
+        self.vmFile.write("push " + segment + " " + str(index))
+        self.vmFile.write("\n")
+
+    def write_pop(self, segment, index):
+        self.vmFile.write("pop " + segment + " " + str(index))
+        self.vmFile.write("\n")
+
+    def write_arithmetic(self, command):
+        self.vmFile.write(command)
+        self.vmFile.write("\n")
+
+    def write_label(self, label):
+        self.vmFile.write("label " + label)
+        self.vmFile.write("\n")
+
+    def write_goto(self, label):
+        self.vmFile.write("goto " + label)
+        self.vmFile.write("\n")
+
+    def write_if(self, label):
+        self.vmFile.write("if-goto " + label)
+        self.vmFile.write("\n")
+
+    def write_call(self, f_name, n_args):
+        self.vmFile.write("call " + f_name + " " + str(n_args))
+        self.vmFile.write("\n")
+
+    def write_return(self):
+        self.vmFile.write("return")
+        self.vmFile.write("\n")
+
+    def close(self):
+        self.vmFile.close()
+        
+
+class CompilationEngine:
+    vmWriter: VMWriter
+    symbol_table: SymbolTable
     # statement beginning tokens
     statement_list = ['if', 'let', 'while', 'return', 'do']
     operator_list = ['+', '-', '*', '/', '&', '|', '<', '>', '=', '-', '~', '=', '&lt;', '&gt;', '&amp;']
@@ -304,39 +342,191 @@ class JackCompiler:
     # indentation for xml output. should go up when adding new element and down when done with element.
     indent_depth = 0
 
-    def __init__(self, tokenizer, source_file):
+    def __init__(self, input_file, output_file):
         self.indent_depth = 0
-        self.class_var_index = 0
-        self.tokenizer = tokenizer
+        self.tokenizer = JackTokenizer(input_file)
+        self.vmWriter = VMWriter(output_file)
         self.symbol_table = SymbolTable()
         self.token_type = ""
         self.current_token = ""
-        output_filename = source_file.split('.')[0] + ".xml"
-        self.output_file = open(output_filename, 'w')
+
+    def test_vmwriter(self):
+        self.vmWriter.write_push("static", 0)
+        self.vmWriter.write_pop("local", 1)
+        self.vmWriter.write_arithmetic("add")
+        self.vmWriter.write_call("String.length", 1)
+        self.vmWriter.write_goto("somewhere")
+        self.vmWriter.write_label("here")
+        self.vmWriter.write_if("there")
+        self.vmWriter.write_return()
 
     def run(self):
+
         while self.tokenizer.has_more_tokens():
             self.current_token, self.token_type = self.tokenizer.advance()
             if self.current_token == 'class':
                 self.compile_class()
+        self.vmWriter.close()
 
-    def increase_indent(self):
-        self.indent_depth = self.indent_depth + 2
+    def compile_class(self):
+        self.output_tag("<class>")
+        self.increase_indent()
+        self.output_tag("<" + self.token_type + "> class </" + self.token_type + ">")
+        self.eat("class")
+        self.symbol_table = SymbolTable()
+        self.output_tag("<identifier> " + self.current_token + " </identifier>")
+        self.advance()
+        if self.eat("{"):
+            self.output_tag("<symbol> { </symbol>")
 
-    def decrease_indent(self):
-        self.indent_depth = self.indent_depth - 2
-        if self.indent_depth < 0:
-            self.indent_depth = 0
+            while self.current_token != "}":
 
-    def expect_token(self, check_token):
-        if check_token != self.current_token:
-            print("Compile Error: Expected token '" + check_token + "', but got '" + self.current_token + "'")
-            exit(-1)
+                if self.current_token == "static":
+                    self.compile_class_var_dec("static")
 
-    def expects_type(self, token_type):
-        if token_type != self.token_type:
-            print("Compile Error: Expected token of type '" + token_type + "', but got '" + self.token_type + "'")
-            exit(-1)
+                if self.current_token == "field":
+                    self.compile_class_var_dec("field")
+
+                if self.current_token == "function":
+                    self.compile_subroutine_dec("function")
+
+                if self.current_token == "method":
+                    self.compile_subroutine_dec("method")
+
+                if self.current_token == "constructor":
+                    self.compile_subroutine_dec("constructor")
+
+                if self.current_token == 'while':
+                    self.compile_while_statement()
+
+                #self.output_element(self.current_token)
+                self.advance()
+
+        self.output_tag("<symbol> } </symbol>")
+        self.decrease_indent()
+        self.output_tag("</class>")
+
+    def compile_class_var_dec(self, var_type):
+        """
+        static type varName |, varName|* ;
+        field type varName |, varName|* ;
+        """
+
+        # static / field
+        var_category = self.current_token
+        self.expect_token(var_type)
+        self.advance()
+        # type def
+        var_type = self.current_token
+        self.advance()
+        # identifier for variable
+        if self.token_type == "identifier":
+            var_name = self.current_token
+            self.add_class_var(var_name, var_category, var_type)
+            self.advance()
+            # if followed by ',' - it is another variable of the same type.
+            # go until ; symbol.
+            while self.current_token != ";":
+                self.advance()
+                if self.token_type == "identifier":
+                    var_name = self.current_token
+                    self.add_class_var(var_name, var_category, var_type)
+
+    def compile_subroutine_dec(self, subroutine_type):
+        # clean slate for method vars.
+        self.symbol_table.start_subroutine()
+        self.output_tag("<subroutineDec>")
+        self.increase_indent()
+        self.output_element()
+        self.eat(subroutine_type)
+        self.output_element()
+        self.advance()
+        self.output_element()
+        self.advance()
+        if self.eat("("):
+            self.output_tag("<symbol> ( </symbol>")
+            self.output_tag("<parameterList>")
+            self.compile_parameter_list()
+            self.output_tag("</parameterList>")
+            self.output_element()  # self.output_tag("<symbol> ) </symbol>")
+            self.eat(")")
+            self.compile_subroutine_body()
+            self.decrease_indent()
+            self.output_tag("</subroutineDec>")
+
+    def compile_parameter_list(self):
+        """
+        parameter list = type varName |, type varName | *
+        :return:
+        """
+        if self.token_type == 'keyword':
+            self.increase_indent()
+            # type
+            self.output_element()
+            var_type = self.current_token
+            self.advance()
+            # varName
+            var_name = self.current_token
+            self.output_element()
+            self.advance()
+            self.add_method_var(var_name, "argument", var_type)
+            while self.current_token == ',':
+                # symbol ,
+                self.output_element()
+                self.advance()
+                # type
+                self.output_element()
+                var_type = self.current_token
+                self.advance()
+                # varName
+                var_name = self.current_token
+                self.add_method_var(var_name, "argument", var_type)
+                self.output_element()
+                self.advance()
+            self.decrease_indent()
+
+    def compile_subroutine_body(self):
+        self.output_tag("<subroutineBody>")
+        self.increase_indent()
+        if self.eat("{"):
+            self.output_tag("<symbol> { </symbol>")
+        while 1:
+            if self.current_token == "var":
+                self.compile_var_dec()
+            else:
+                self.compile_statements()
+            if self.current_token == "}":
+                break
+            self.advance()
+        # have arrived at closing brace '}'
+        self.output_element()
+        self.decrease_indent()
+        self.output_tag("</subroutineBody>")
+
+    def compile_var_dec(self):
+        self.output_tag("<varDec>")
+        self.increase_indent()
+        # var
+        self.output_element()
+        self.advance()
+        # type
+        self.output_element()
+        var_type = self.current_token
+        self.advance()
+        # go until ; symbol.
+        while self.current_token != ";":
+            # variable name.
+            if self.token_type == "identifier":
+                self.add_method_var(self.current_token, 'local', var_type)
+            self.output_element()
+            self.advance()
+            # could be comma or semicolon.
+            self.output_element()
+            if self.current_token == ",":
+                self.advance()
+
+        self.decrease_indent()
+        self.output_tag("</varDec>")
 
     def compile_term(self):
         """
@@ -386,10 +576,10 @@ class JackCompiler:
         """
         self.output_element()
         var_name = self.current_token
-        if self.symbol_table.exists(var_name):
-            print("term expression " + var_name + " - push " + self.symbol_table.kind_of(var_name),  self.symbol_table.index_of(var_name))
-        else:
-            self.output_tag("Found a var_name? " + var_name)
+        #if self.symbol_table.exists(var_name):
+        #    print("term expression " + var_name + " - push " + self.symbol_table.kind_of(var_name),  self.symbol_table.index_of(var_name))
+        #else:
+        #    self.output_tag("Found a var_name? " + var_name)
         self.advance()
         # got a '.' ??? if so, it's an object var with method call.
         if self.current_token == ".":
@@ -443,177 +633,6 @@ class JackCompiler:
 
         self.decrease_indent()
         self.output_tag("</expression>")
-
-    def compile_class(self):
-        self.output_tag("<class>")
-        self.increase_indent()
-        self.output_tag("<" + self.token_type + "> class </" + self.token_type + ">")
-        self.eat("class")
-        self.symbol_table = SymbolTable()
-        self.output_tag("<identifier> " + self.current_token + " </identifier>")
-        self.advance()
-        if self.eat("{"):
-            self.output_tag("<symbol> { </symbol>")
-
-            while self.current_token != "}":
-
-                if self.current_token == "static":
-                    self.compile_class_var_dec("static")
-
-                if self.current_token == "field":
-                    self.compile_class_var_dec("field")
-
-                if self.current_token == "function":
-                    self.compile_subroutine("function")
-
-                if self.current_token == "method":
-                    self.compile_subroutine("method")
-
-                if self.current_token == "constructor":
-                    self.compile_subroutine("constructor")
-
-                if self.current_token == 'while':
-                    self.compile_while_statement()
-
-                #self.output_element(self.current_token)
-                self.advance()
-
-        self.output_tag("<symbol> } </symbol>")
-        self.decrease_indent()
-        self.output_tag("</class>")
-
-    def add_class_var(self, name, var_kind, var_type):
-        self.symbol_table.define_var(name, var_type, var_kind)
-
-    def add_method_var(self, name, var_kind, var_type):
-        """
-        argument category
-        local category
-        :param name:
-        :param var_kind:
-        :param var_type:
-        :return:
-        """
-        self.symbol_table.define_var(name, var_type, var_kind)
-
-    def compile_class_var_dec(self, var_type):
-        """
-        static type varName |, varName|* ;
-        field type varName |, varName|* ;
-        """
-
-        # static / field
-        var_category = self.current_token
-        self.expect_token(var_type)
-        self.advance()
-        # type def
-        var_type = self.current_token
-        self.advance()
-        # identifier for variable
-        if self.token_type == "identifier":
-            var_name = self.current_token
-            self.add_class_var(var_name, var_category, var_type)
-            self.advance()
-            # if followed by ',' - it is another variable of the same type.
-            # go until ; symbol.
-            while self.current_token != ";":
-                self.advance()
-                if self.token_type == "identifier":
-                    var_name = self.current_token
-                    self.add_class_var(var_name, var_category, var_type)
-
-    def compile_var_dec(self):
-        self.output_tag("<varDec>")
-        self.increase_indent()
-        # var
-        self.output_element()
-        self.advance()
-        # type
-        self.output_element()
-        var_type = self.current_token
-        self.advance()
-        # go until ; symbol.
-        while self.current_token != ";":
-            # variable name.
-            if self.token_type == "identifier":
-                self.add_method_var(self.current_token, 'local', var_type)
-            self.output_element()
-            self.advance()
-            # could be comma or semicolon.
-            self.output_element()
-            if self.current_token == ",":
-                self.advance()
-
-        self.decrease_indent()
-        self.output_tag("</varDec>")
-
-    def compile_subroutine(self, subroutine_type):
-        # clean slate for method vars.
-        self.symbol_table.start_subroutine()
-        self.output_tag("<subroutineDec>")
-        self.increase_indent()
-        self.output_element()
-        self.eat(subroutine_type)
-        self.output_element()
-        self.advance()
-        self.output_element()
-        self.advance()
-        if self.eat("("):
-            self.output_tag("<symbol> ( </symbol>")
-            self.output_tag("<parameterList>")
-            self.compile_parameter_list()
-            self.output_tag("</parameterList>")
-            self.output_element()  #self.output_tag("<symbol> ) </symbol>")
-            self.eat(")")
-            self.output_tag("<subroutineBody>")
-            self.increase_indent()
-            if self.eat("{"):
-                self.output_tag("<symbol> { </symbol>")
-            while 1:
-                if self.current_token == "var":
-                    self.compile_var_dec()
-                else:
-                    self.compile_statements()
-                if self.current_token == "}":
-                    break
-                self.advance()
-            # have arrived at closing brace '}'
-            self.output_element()
-            self.decrease_indent()
-            self.output_tag("</subroutineBody>")
-            self.decrease_indent()
-            self.output_tag("</subroutineDec>")
-
-    def compile_parameter_list(self):
-        """
-        parameter list = type varName |, type varName | *
-        :return:
-        """
-        if self.token_type == 'keyword':
-            self.increase_indent()
-            # type
-            self.output_element()
-            var_type = self.current_token
-            self.advance()
-            # varName
-            var_name = self.current_token
-            self.output_element()
-            self.advance()
-            self.add_method_var(var_name, "argument", var_type)
-            while self.current_token == ',':
-                # symbol ,
-                self.output_element()
-                self.advance()
-                # type
-                self.output_element()
-                var_type = self.current_token
-                self.advance()
-                # varName
-                var_name = self.current_token
-                self.add_method_var(var_name, "argument", var_type)
-                self.output_element()
-                self.advance()
-            self.decrease_indent()
 
     def compile_statements(self):
         self.output_tag("<statements>")
@@ -781,12 +800,46 @@ class JackCompiler:
 
     def output_tag(self, element):
         output_string = self.indent_depth * " " + element
-        self.output_file.write(output_string)
-        self.output_file.write("\n")
+        #self.output_file.write(output_string)
+        #self.output_file.write("\n")
 
     def output_element(self):
         output_string = "<" + self.token_type + "> " + self.current_token + " </" + self.token_type + ">"
         self.output_tag(output_string)
+
+    def increase_indent(self):
+        self.indent_depth = self.indent_depth + 2
+
+    def decrease_indent(self):
+        self.indent_depth = self.indent_depth - 2
+        if self.indent_depth < 0:
+            self.indent_depth = 0
+
+    def expect_token(self, check_token):
+        if check_token != self.current_token:
+            print("Compile Error: Expected token '" + check_token + "', but got '" + self.current_token + "'")
+            exit(-1)
+
+    def expects_type(self, token_type):
+        if token_type != self.token_type:
+            print("Compile Error: Expected token of type '" + token_type + "', but got '" + self.token_type + "'")
+            exit(-1)
+
+    def add_class_var(self, name, var_kind, var_type):
+        self.symbol_table.define_var(name, var_type, var_kind)
+
+    def add_method_var(self, name, var_kind, var_type):
+        """
+        argument category
+        local category
+        :param name:
+        :param var_kind:
+        :param var_type:
+        :return:
+        """
+        self.symbol_table.define_var(name, var_type, var_kind)
+
+
 
 # Main program.
 if len(sys.argv) != 2:
@@ -794,12 +847,14 @@ if len(sys.argv) != 2:
     exit(-1)
 
 
-def compile_file(source_file):
-    tokenizer = JackTokenizer(source_file)
-    print("... compiling " + source_file + " ...\n")
-    compiler = JackCompiler(tokenizer, source_file)
+def compile_file(filename):
+    print("... compiling " + filename + " ...\n")
+    base_filename = filename.split('.')[0]
+    output_filename = base_filename + ".vm"
+    output_file = open(output_filename, 'w')
+    source_file = open(filename)
+    compiler = CompilationEngine(source_file, output_file)
     compiler.run()
-    #print("... done compiling \n")
 
 
 def compile_directory(source_dir):
