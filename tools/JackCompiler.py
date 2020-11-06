@@ -342,10 +342,11 @@ class CompilationEngine:
     # indentation for xml output. should go up when adding new element and down when done with element.
     indent_depth = 0
 
-    def __init__(self, input_file, output_file):
+    def __init__(self, input_file, output_file, base_filename):
         self.indent_depth = 0
         self.tokenizer = JackTokenizer(input_file)
         self.vmWriter = VMWriter(output_file)
+        self.xml_file = open(base_filename + ".xml", 'w')
         self.symbol_table = SymbolTable()
         self.token_type = ""
         self.current_token = ""
@@ -367,6 +368,7 @@ class CompilationEngine:
             if self.current_token == 'class':
                 self.compile_class()
         self.vmWriter.close()
+        self.xml_file.close()
 
     def compile_class(self):
         self.output_tag("<class>")
@@ -528,112 +530,6 @@ class CompilationEngine:
         self.decrease_indent()
         self.output_tag("</varDec>")
 
-    def compile_term(self):
-        """
-        term := integerConstant | stringConstant | keywordConstant |
-            varName | varName '[' expression ']' | subroutineCall |
-            '(' expression ')' | unaryOp term
-        :return:
-        """
-        self.output_tag("<term>")
-        self.increase_indent()
-        if self.token_type == "integerConstant" or self == "stringConstant":
-            self.output_element()
-            self.advance()
-        else:
-            if self.token_type != "symbol":
-                # term = varName | constant | varName '[' expr ']'
-                # varName = simplevar
-                # varName = class.method(expr)
-                #self.increase_indent()
-                self.term_expression()
-            else:
-                if self.current_token == '(':
-                    # handle '(' expression ')'
-                    #self.increase_indent()
-                    self.output_element()
-                    self.advance()
-                    self.compile_expression()
-                    self.output_element()
-                    self.advance()
-                    #self.decrease_indent()
-                else:
-                    if self.current_token == '-' or self.current_token == '~':
-                        # handle unaryOp
-                        # unaryOp term
-                        self.output_element()
-                        self.advance()
-                        self.compile_term()
-
-        self.decrease_indent()
-        self.output_tag("</term>")
-
-    def term_expression(self):
-        """
-        The inner part of a term expression.
-        Also usable from the "do" compile as a do can be do <identifier>.<identifier>(<expressionlist>);
-        Or do <identifier>(<expressionlist>);
-        """
-        self.output_element()
-        var_name = self.current_token
-        #if self.symbol_table.exists(var_name):
-        #    print("term expression " + var_name + " - push " + self.symbol_table.kind_of(var_name),  self.symbol_table.index_of(var_name))
-        #else:
-        #    self.output_tag("Found a var_name? " + var_name)
-        self.advance()
-        # got a '.' ??? if so, it's an object var with method call.
-        if self.current_token == ".":
-            # handle method
-            self.output_element()
-            self.advance()
-            # method
-            self.output_element()
-            self.advance()
-            # (
-            # self.output_tag("*** ( *** ")
-            self.output_element()
-            self.advance()
-            self.compile_expression_list()
-            self.output_element()
-            # move past )
-            self.advance()
-        # ** end refactor
-        if self.current_token == '(':
-            # <identifier> '(' expressionList ')'
-            self.output_element()
-            self.advance()
-            self.compile_expression_list()
-            self.output_element()
-        if self.current_token == '[':
-            self.compile_array_sub()
-
-    def compile_expression_list(self):
-        self.output_tag("<expressionList>")
-        self.increase_indent()
-        while self.current_token != ")":
-            self.compile_expression()
-            if self.current_token == ',':
-                self.output_element()
-                self.advance()
-        self.decrease_indent()
-        self.output_tag("</expressionList>")
-
-    def compile_expression(self):
-        # expression: term ( op term)
-        # first term is mandatory. once first term compiled, look for op.
-        self.output_tag("<expression>")
-        self.increase_indent()
-        self.compile_term()
-        # term is done, look for operator.
-        if self.current_token in self.operator_list:
-
-            self.output_element()
-            self.advance()
-            self.compile_term()
-
-        self.decrease_indent()
-        self.output_tag("</expression>")
-
     def compile_statements(self):
         self.output_tag("<statements>")
         self.increase_indent()
@@ -652,30 +548,6 @@ class CompilationEngine:
             self.advance()
         self.decrease_indent()
         self.output_tag("</statements>")
-
-    def compile_do_statement(self):
-        self.output_tag("<doStatement>")
-        self.increase_indent()
-        self.output_element()
-        self.advance()
-        self.term_expression()
-        while self.current_token != ";":
-            self.advance()
-        self.output_element()
-        self.decrease_indent()
-        self.output_tag("</doStatement>")
-
-    def compile_return_statement(self):
-        self.output_tag("<returnStatement>")
-        self.increase_indent()
-        self.output_tag("<keyword> return </keyword>")
-        self.advance()
-        while self.current_token != ";":
-            self.compile_expression()
-            #self.advance()
-        self.output_element()
-        self.decrease_indent()
-        self.output_tag("</returnStatement>")
 
     def compile_let_statement(self):
         """
@@ -706,20 +578,6 @@ class CompilationEngine:
         self.output_element()
         self.decrease_indent()
         self.output_tag("</letStatement>")
-
-    def compile_array_sub(self):
-        # output [
-        self.output_element()
-        self.advance()
-        # do the expression in []
-        self.compile_expression()
-        # output ']'
-        self.output_element()
-        self.advance()
-        #self.output_element()
-        #self.output_tag("compile_array_sub current token " + self.current_token)
-        # move up to = sign.
-        #self.advance()
 
     def compile_if_statement(self):
         # if (expr) { statement(s) } [ else { statement(s) }
@@ -780,6 +638,150 @@ class CompilationEngine:
         self.decrease_indent()
         self.output_tag("</whileStatement>")
 
+    def compile_do_statement(self):
+        self.output_tag("<doStatement>")
+        self.increase_indent()
+        self.output_element()
+        self.advance()
+        self.term_expression()
+        while self.current_token != ";":
+            self.advance()
+        self.output_element()
+        self.decrease_indent()
+        self.output_tag("</doStatement>")
+
+    def compile_return_statement(self):
+        self.output_tag("<returnStatement>")
+        self.increase_indent()
+        self.output_tag("<keyword> return </keyword>")
+        self.advance()
+        while self.current_token != ";":
+            self.compile_expression()
+            #self.advance()
+        self.output_element()
+        self.decrease_indent()
+        self.output_tag("</returnStatement>")
+
+    def compile_expression(self):
+        # expression: term ( op term)
+        # first term is mandatory. once first term compiled, look for op.
+        self.output_tag("<expression>")
+        self.increase_indent()
+        self.compile_term()
+        # term is done, look for operator.
+        if self.current_token in self.operator_list:
+
+            self.output_element()
+            self.advance()
+            self.compile_term()
+
+        self.decrease_indent()
+        self.output_tag("</expression>")
+
+    def compile_term(self):
+        """
+        term := integerConstant | stringConstant | keywordConstant |
+            varName | varName '[' expression ']' | subroutineCall |
+            '(' expression ')' | unaryOp term
+        :return:
+        """
+        self.output_tag("<term>")
+        self.increase_indent()
+        if self.token_type == "integerConstant" or self == "stringConstant":
+            self.output_element()
+            self.advance()
+        else:
+            if self.token_type != "symbol":
+                # term = varName | constant | varName '[' expr ']'
+                # varName = simplevar
+                # varName = class.method(expr)
+                #self.increase_indent()
+                self.term_expression()
+            else:
+                if self.current_token == '(':
+                    # handle '(' expression ')'
+                    #self.increase_indent()
+                    self.output_element()
+                    self.advance()
+                    self.compile_expression()
+                    self.output_element()
+                    self.advance()
+                    #self.decrease_indent()
+                else:
+                    if self.current_token == '-' or self.current_token == '~':
+                        # handle unaryOp
+                        # unaryOp term
+                        self.output_element()
+                        self.advance()
+                        self.compile_term()
+
+        self.decrease_indent()
+        self.output_tag("</term>")
+
+    def compile_expression_list(self):
+        self.output_tag("<expressionList>")
+        self.increase_indent()
+        while self.current_token != ")":
+            self.compile_expression()
+            if self.current_token == ',':
+                self.output_element()
+                self.advance()
+        self.decrease_indent()
+        self.output_tag("</expressionList>")
+
+    def term_expression(self):
+        """
+        The inner part of a term expression.
+        Also usable from the "do" compile as a do can be do <identifier>.<identifier>(<expressionlist>);
+        Or do <identifier>(<expressionlist>);
+        """
+        self.output_element()
+        var_name = self.current_token
+        #if self.symbol_table.exists(var_name):
+        #    print("term expression " + var_name + " - push " + self.symbol_table.kind_of(var_name),  self.symbol_table.index_of(var_name))
+        #else:
+        #    self.output_tag("Found a var_name? " + var_name)
+        self.advance()
+        # got a '.' ??? if so, it's an object var with method call.
+        if self.current_token == ".":
+            # handle method
+            self.output_element()
+            self.advance()
+            # method
+            self.output_element()
+            self.advance()
+            # (
+            # self.output_tag("*** ( *** ")
+            self.output_element()
+            self.advance()
+            self.compile_expression_list()
+            self.output_element()
+            # move past )
+            self.advance()
+        # ** end refactor
+        if self.current_token == '(':
+            # <identifier> '(' expressionList ')'
+            self.output_element()
+            self.advance()
+            self.compile_expression_list()
+            self.output_element()
+        if self.current_token == '[':
+            self.compile_array_sub()
+
+    def compile_array_sub(self):
+        # output [
+        self.output_element()
+        self.advance()
+        # do the expression in []
+        self.compile_expression()
+        # output ']'
+        self.output_element()
+        self.advance()
+        #self.output_element()
+        #self.output_tag("compile_array_sub current token " + self.current_token)
+        # move up to = sign.
+        #self.advance()
+
     def advance(self):
         if self.tokenizer.has_more_tokens():
             self.current_token, self.token_type = self.tokenizer.advance()
@@ -800,8 +802,8 @@ class CompilationEngine:
 
     def output_tag(self, element):
         output_string = self.indent_depth * " " + element
-        #self.output_file.write(output_string)
-        #self.output_file.write("\n")
+        self.xml_file.write(output_string)
+        self.xml_file.write("\n")
 
     def output_element(self):
         output_string = "<" + self.token_type + "> " + self.current_token + " </" + self.token_type + ">"
@@ -840,36 +842,37 @@ class CompilationEngine:
         self.symbol_table.define_var(name, var_type, var_kind)
 
 
-
-# Main program.
-if len(sys.argv) != 2:
-    print("Usage: " + sys.argv[0] + " dir | jack_prog.jack")
-    exit(-1)
-
-
+# Jack Compiler.
+# Compile a single File.
+# Create a CompilationEngine with the source file stream and an output file stream.
+# Run the Compile.
 def compile_file(filename):
     print("... compiling " + filename + " ...\n")
     base_filename = filename.split('.')[0]
     output_filename = base_filename + ".vm"
     output_file = open(output_filename, 'w')
     source_file = open(filename)
-    compiler = CompilationEngine(source_file, output_file)
+    compiler = CompilationEngine(source_file, output_file, base_filename)
     compiler.run()
 
 
+# Compile a directory of *.jack files.
 def compile_directory(source_dir):
     for file in glob.glob(source_dir + "/*.jack"):
         compile_file(file)
 
 
-compareCounter = 1
-returnCounter = 1
-
+# Compiler Main Entry point.
+# Check arguments passed in.
+if len(sys.argv) != 2:
+    print("Usage: " + sys.argv[0] + " dir | jack_prog.jack")
+    exit(-1)
 source_filename = sys.argv[1]
 # is this dir name or file name?
 if source_filename.endswith('.jack'):
     compile_file(source_filename)
 else:
     compile_directory(source_filename)
+
 
 
