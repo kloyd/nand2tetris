@@ -350,6 +350,7 @@ class CompilationEngine:
         self.symbol_table = SymbolTable()
         self.token_type = ""
         self.current_token = ""
+        self.class_name = ""
 
     def test_vmwriter(self):
         self.vmWriter.write_push("static", 0)
@@ -376,6 +377,7 @@ class CompilationEngine:
         self.increase_indent()
         self.output_tag("<kind>" + self.symbol_table.kind_of(var_name) + "</kind>")
         self.output_tag("<type>" + self.symbol_table.type_of(var_name) + "</type>")
+        self.output_tag("<variableName>" + var_name + "</variableName>")
         self.output_tag("<position>" + str(self.symbol_table.index_of(var_name)) + "</position>")
         self.decrease_indent()
         self.output_tag("</variableDec>")
@@ -388,6 +390,7 @@ class CompilationEngine:
         self.eat("class")
         self.symbol_table = SymbolTable()
         self.output_tag("<identifier> " + self.current_token + " </identifier>")
+        self.class_name = self.current_token
         self.advance()
         if self.eat("{"):
             self.output_tag("<symbol> { </symbol>")
@@ -424,11 +427,9 @@ class CompilationEngine:
         static type varName |, varName|* ;
         field type varName |, varName|* ;
         """
-
         self.output_tag("<classVarDec>")
         self.increase_indent()
         self.output_element()
-
         # static / field
         var_category = self.current_token
         self.expect_token(var_type)
@@ -437,13 +438,10 @@ class CompilationEngine:
         var_type = self.current_token
         self.output_element()
         self.advance()
-
         # identifier for variable
         if self.token_type == "identifier":
             self.output_tag("<identifier> " + self.current_token + " </identifier>")
             var_name = self.current_token
-            print("Category: " + var_category + ", Type: " + var_type + ", Name: " + var_name)
-
             self.add_class_var(var_name, var_category, var_type)
 
             self.advance()
@@ -465,6 +463,8 @@ class CompilationEngine:
         self.output_tag("<subroutineDec>")
         self.increase_indent()
         self.output_element()
+        if subroutine_type == "method":
+            self.add_method_var("this", "argument", self.class_name)
         self.eat(subroutine_type)
         self.output_element()
         self.advance()
@@ -486,7 +486,7 @@ class CompilationEngine:
         parameter list = type varName |, type varName | *
         :return:
         """
-        if self.token_type == 'keyword':
+        if True:   #self.token_type == 'keyword':
             self.increase_indent()
             # type
             self.output_element()
@@ -613,7 +613,7 @@ class CompilationEngine:
         self.advance()
         # '(' <expr> ')'
         self.output_element()
-        self.advance() # move past (
+        self.advance()  # move past (
         self.compile_expression()
         self.output_element()
         #self.output_tag("if expression done.")
@@ -682,7 +682,6 @@ class CompilationEngine:
         self.advance()
         while self.current_token != ";":
             self.compile_expression()
-            #self.advance()
         self.output_element()
         self.decrease_indent()
         self.output_tag("</returnStatement>")
