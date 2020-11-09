@@ -328,6 +328,10 @@ class VMWriter:
         self.vmFile.write("return")
         self.vmFile.write("\n")
 
+    def write_function(self, class_name, function_name, nargs):
+        self.vmFile.write("function " + class_name + "." + function_name + " " + str(nargs))
+        self.vmFile.write("\n")
+
     def close(self):
         self.vmFile.close()
         
@@ -375,10 +379,10 @@ class CompilationEngine:
         self.increase_indent()
         self.output_tag("<variableDec>")
         self.increase_indent()
-        self.output_tag("<kind>" + self.symbol_table.kind_of(var_name) + "</kind>")
-        self.output_tag("<type>" + self.symbol_table.type_of(var_name) + "</type>")
-        self.output_tag("<variableName>" + var_name + "</variableName>")
-        self.output_tag("<position>" + str(self.symbol_table.index_of(var_name)) + "</position>")
+        self.output_tag("<kind> " + self.symbol_table.kind_of(var_name) + " </kind>")
+        self.output_tag("<type> " + self.symbol_table.type_of(var_name) + " </type>")
+        self.output_tag("<variableName> " + var_name + " </variableName>")
+        self.output_tag("<position> " + str(self.symbol_table.index_of(var_name)) + " </position>")
         self.decrease_indent()
         self.output_tag("</variableDec>")
         self.decrease_indent()
@@ -486,7 +490,7 @@ class CompilationEngine:
         parameter list = type varName |, type varName | *
         :return:
         """
-        if True:   #self.token_type == 'keyword':
+        if self.token_type != 'symbol':
             self.increase_indent()
             # type
             self.output_element()
