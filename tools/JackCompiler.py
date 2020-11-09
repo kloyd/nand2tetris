@@ -370,14 +370,16 @@ class CompilationEngine:
         self.vmWriter.close()
         self.xml_file.close()
 
-    def output_vardec(self, var_name):
-        self.output_tag("<vardec>")
+    def output_variable_dec(self, var_name):
+        self.increase_indent()
+        self.output_tag("<variableDec>")
         self.increase_indent()
         self.output_tag("<kind>" + self.symbol_table.kind_of(var_name) + "</kind>")
         self.output_tag("<type>" + self.symbol_table.type_of(var_name) + "</type>")
         self.output_tag("<position>" + str(self.symbol_table.index_of(var_name)) + "</position>")
         self.decrease_indent()
-        self.output_tag("</vardec>")
+        self.output_tag("</variableDec>")
+        self.decrease_indent()
 
     def compile_class(self):
         self.output_tag("<class>")
@@ -399,13 +401,13 @@ class CompilationEngine:
                     self.compile_class_var_dec("field")
 
                 if self.current_token == "function":
-                    self.compile_subroutine_dec("function")
+                    self.compile_subroutine("function")
 
                 if self.current_token == "method":
-                    self.compile_subroutine_dec("method")
+                    self.compile_subroutine("method")
 
                 if self.current_token == "constructor":
-                    self.compile_subroutine_dec("constructor")
+                    self.compile_subroutine("constructor")
 
                 if self.current_token == 'while':
                     self.compile_while_statement()
@@ -457,7 +459,7 @@ class CompilationEngine:
         self.decrease_indent()
         self.output_tag("</classVarDec>")
 
-    def compile_subroutine_dec(self, subroutine_type):
+    def compile_subroutine(self, subroutine_type):
         # clean slate for method vars.
         self.symbol_table.start_subroutine()
         self.output_tag("<subroutineDec>")
@@ -853,7 +855,7 @@ class CompilationEngine:
     def add_class_var(self, name, var_kind, var_type):
         self.symbol_table.define_var(name, var_type, var_kind)
         # Add Symbol Table item to XML output
-        self.output_vardec(name)
+        self.output_variable_dec(name)
 
     def add_method_var(self, name, var_kind, var_type):
         """
@@ -865,6 +867,7 @@ class CompilationEngine:
         :return:
         """
         self.symbol_table.define_var(name, var_type, var_kind)
+        self.output_variable_dec(name)
 
 
 # Jack Compiler.
