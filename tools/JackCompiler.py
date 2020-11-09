@@ -271,7 +271,7 @@ class SymbolTable:
         if kind == "field":
             the_var = self.fields.get(name)
         if kind == "static":
-            the_var = self.fields.get(name)
+            the_var = self.statics.get(name)
         return the_var.get_type()
 
     def index_of(self, name):
@@ -284,7 +284,7 @@ class SymbolTable:
         if kind == "field":
             the_var = self.fields.get(name)
         if kind == "static":
-            the_var = self.fields.get(name)
+            the_var = self.statics.get(name)
 
         if the_var is None:
             return 0
@@ -370,6 +370,15 @@ class CompilationEngine:
         self.vmWriter.close()
         self.xml_file.close()
 
+    def output_vardec(self, var_name):
+        self.output_tag("<vardec>")
+        self.increase_indent()
+        self.output_tag("<kind>" + self.symbol_table.kind_of(var_name) + "</kind>")
+        self.output_tag("<type>" + self.symbol_table.type_of(var_name) + "</type>")
+        self.output_tag("<position>" + str(self.symbol_table.index_of(var_name)) + "</position>")
+        self.decrease_indent()
+        self.output_tag("</vardec>")
+
     def compile_class(self):
         self.output_tag("<class>")
         self.increase_indent()
@@ -414,25 +423,39 @@ class CompilationEngine:
         field type varName |, varName|* ;
         """
 
+        self.output_tag("<classVarDec>")
+        self.increase_indent()
+        self.output_element()
+
         # static / field
         var_category = self.current_token
         self.expect_token(var_type)
         self.advance()
         # type def
         var_type = self.current_token
+        self.output_element()
         self.advance()
+
         # identifier for variable
         if self.token_type == "identifier":
+            self.output_tag("<identifier> " + self.current_token + " </identifier>")
             var_name = self.current_token
+            print("Category: " + var_category + ", Type: " + var_type + ", Name: " + var_name)
+
             self.add_class_var(var_name, var_category, var_type)
+
             self.advance()
+            self.output_element()
             # if followed by ',' - it is another variable of the same type.
             # go until ; symbol.
             while self.current_token != ";":
                 self.advance()
+                self.output_element()
                 if self.token_type == "identifier":
                     var_name = self.current_token
                     self.add_class_var(var_name, var_category, var_type)
+        self.decrease_indent()
+        self.output_tag("</classVarDec>")
 
     def compile_subroutine_dec(self, subroutine_type):
         # clean slate for method vars.
@@ -829,6 +852,8 @@ class CompilationEngine:
 
     def add_class_var(self, name, var_kind, var_type):
         self.symbol_table.define_var(name, var_type, var_kind)
+        # Add Symbol Table item to XML output
+        self.output_vardec(name)
 
     def add_method_var(self, name, var_kind, var_type):
         """
