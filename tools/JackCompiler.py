@@ -249,7 +249,7 @@ class SymbolTable:
         if name in self.args:
             kind = "argument"
         if name in self.fields:
-            kind = "field"
+            kind = "this"
         if name in self.statics:
             kind = "static"
         return kind
@@ -268,7 +268,7 @@ class SymbolTable:
             the_var = self.locals.get(name)
         if kind == "argument":
             the_var = self.args.get(name)
-        if kind == "field":
+        if kind == "this":
             the_var = self.fields.get(name)
         if kind == "static":
             the_var = self.statics.get(name)
@@ -281,7 +281,7 @@ class SymbolTable:
             the_var = self.locals.get(name)
         if kind == "argument":
             the_var = self.args.get(name)
-        if kind == "field":
+        if kind == "this":
             the_var = self.fields.get(name)
         if kind == "static":
             the_var = self.statics.get(name)
@@ -347,6 +347,7 @@ class CompilationEngine:
     indent_depth = 0
 
     def __init__(self, input_file, output_file, base_filename):
+
         self.indent_depth = 0
         self.tokenizer = JackTokenizer(input_file)
         self.vmWriter = VMWriter(output_file)
@@ -355,6 +356,8 @@ class CompilationEngine:
         self.token_type = ""
         self.current_token = ""
         self.class_name = ""
+        self.return_type = "void"
+        self.subroutine_type = ""
 
     def test_vmwriter(self):
         self.vmWriter.write_push("static", 0)
@@ -467,11 +470,14 @@ class CompilationEngine:
         self.output_tag("<subroutineDec>")
         self.increase_indent()
         self.output_element()
+        self.subroutine_type = subroutine_type
         if subroutine_type == "method":
             self.add_method_var("this", "argument", self.class_name)
         self.eat(subroutine_type)
+        self.return_type = self.current_token
         self.output_element()
         self.advance()
+        subroutine_name = self.current_token
         self.output_element()
         self.advance()
         if self.eat("("):
@@ -481,9 +487,10 @@ class CompilationEngine:
             self.output_tag("</parameterList>")
             self.output_element()  # self.output_tag("<symbol> ) </symbol>")
             self.eat(")")
-            self.compile_subroutine_body()
+            self.compile_subroutine_body(subroutine_name)
             self.decrease_indent()
             self.output_tag("</subroutineDec>")
+
 
     def compile_parameter_list(self):
         """
@@ -516,7 +523,7 @@ class CompilationEngine:
                 self.advance()
             self.decrease_indent()
 
-    def compile_subroutine_body(self):
+    def compile_subroutine_body(self, subroutine_name):
         self.output_tag("<subroutineBody>")
         self.increase_indent()
         if self.eat("{"):
@@ -525,6 +532,8 @@ class CompilationEngine:
             if self.current_token == "var":
                 self.compile_var_dec()
             else:
+                # write out function header
+                self.vmWriter.write_function(self.class_name, subroutine_name, self.symbol_table.var_count("local"))
                 self.compile_statements()
             if self.current_token == "}":
                 break
@@ -591,6 +600,7 @@ class CompilationEngine:
         self.eat("let")
         # output varName
         # should be output_term?
+        var_name = self.current_token
         self.output_element()
         self.advance()
         # this could be '=' or '['
@@ -606,6 +616,9 @@ class CompilationEngine:
         self.compile_expression()
         self.output_element()
         self.decrease_indent()
+        var_kind = self.symbol_table.kind_of(var_name)
+        var_index = self.symbol_table.index_of(var_name)
+        self.vmWriter.write_pop(var_kind, var_index)
         self.output_tag("</letStatement>")
 
     def compile_if_statement(self):
@@ -687,6 +700,11 @@ class CompilationEngine:
         while self.current_token != ";":
             self.compile_expression()
         self.output_element()
+        if self.return_type == "void":
+            self.vmWriter.write_push("constant", 0)
+        if self.subroutine_type == "constructor":
+            self.vmWriter.write_push("pointer", 0)
+        self.vmWriter.write_return()
         self.decrease_indent()
         self.output_tag("</returnStatement>")
 
@@ -765,10 +783,7 @@ class CompilationEngine:
         """
         self.output_element()
         var_name = self.current_token
-        #if self.symbol_table.exists(var_name):
-        #    print("term expression " + var_name + " - push " + self.symbol_table.kind_of(var_name),  self.symbol_table.index_of(var_name))
-        #else:
-        #    self.output_tag("Found a var_name? " + var_name)
+
         self.advance()
         # got a '.' ??? if so, it's an object var with method call.
         if self.current_token == ".":
@@ -795,6 +810,18 @@ class CompilationEngine:
             self.output_element()
         if self.current_token == '[':
             self.compile_array_sub()
+        else:
+            # just a variable?
+            if self.symbol_table.exists(var_name):
+                self.output_tag(var_name)
+                var_kind = self.symbol_table.kind_of(var_name)
+                var_index = self.symbol_table.index_of(var_name)
+                self.output_tag(var_kind)
+                self.output_tag(str(var_index))
+                if var_kind == "field":
+                    self.vmWriter.write_push("this", var_index)
+                else:
+                    self.vmWriter.write_push(var_kind, var_index)
 
     def compile_array_sub(self):
         # output [
