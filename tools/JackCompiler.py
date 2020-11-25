@@ -305,7 +305,20 @@ class VMWriter:
         self.vmFile.write("\n")
 
     def write_arithmetic(self, command):
-        self.vmFile.write(command)
+        if command == '+':
+            self.vmFile.write('add')
+        elif command == '-':
+            self.vmFile.write('sub')
+        elif command == '*':
+            self.vmFile.write('call Math.multiply 2')
+        elif command == '/':
+            self.vmFile.write('call Math.divide 2')
+        elif command == '&lt;':
+            self.vmFile.write('lt')
+        elif command == '&gt;':
+            self.vmFile.write('gt')
+        else:
+            self.vmFile.write(command)
         self.vmFile.write("\n")
 
     def write_label(self, label):
@@ -716,7 +729,7 @@ class CompilationEngine:
         self.compile_term()
         # term is done, look for operator.
         if self.current_token in self.operator_list:
-
+            self.vmWriter.write_arithmetic(self.current_token)
             self.output_element()
             self.advance()
             self.compile_term()
@@ -757,6 +770,7 @@ class CompilationEngine:
                     if self.current_token == '-' or self.current_token == '~':
                         # handle unaryOp
                         # unaryOp term
+                        self.vmWriter.write_arithmetic(self.current_token)
                         self.output_element()
                         self.advance()
                         self.compile_term()
