@@ -486,6 +486,7 @@ class CompilationEngine:
         self.subroutine_type = subroutine_type
         if subroutine_type == "method":
             self.add_method_var("this", "argument", self.class_name)
+
         self.eat(subroutine_type)
         self.return_type = self.current_token
         self.output_element()
@@ -547,6 +548,11 @@ class CompilationEngine:
             else:
                 # write out function header
                 self.vmWriter.write_function(self.class_name, subroutine_name, self.symbol_table.var_count("local"))
+                # Constructor Method - push number of fields and memory allocation, save the pointer.
+                if self.subroutine_type == "constructor":
+                    self.vmWriter.write_push("constant", str(self.symbol_table.var_count("field")))
+                    self.vmWriter.write_call("Memory.alloc", "1")
+                    self.vmWriter.write_pop("pointer", "0")
                 self.compile_statements()
             if self.current_token == "}":
                 break
