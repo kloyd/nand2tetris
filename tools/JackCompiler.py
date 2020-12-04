@@ -753,6 +753,8 @@ class CompilationEngine:
         self.output_tag("<term>")
         self.increase_indent()
         if self.token_type == "integerConstant" or self == "stringConstant":
+            if self.token_type == "integerConstant":
+                self.vmWriter.write_push("constant", self.current_token)
             self.output_element()
             self.advance()
         else:
