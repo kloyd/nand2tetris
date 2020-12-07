@@ -317,6 +317,8 @@ class VMWriter:
             self.vmFile.write('lt')
         elif command == '&gt;':
             self.vmFile.write('gt')
+        elif command == "~":
+            self.vmFile.write('not')
         else:
             self.vmFile.write(command)
         self.vmFile.write("\n")
@@ -735,10 +737,12 @@ class CompilationEngine:
         self.compile_term()
         # term is done, look for operator.
         if self.current_token in self.operator_list:
-            self.vmWriter.write_arithmetic(self.current_token)
+            # got an Op. save it for after second term
+            op = self.current_token
             self.output_element()
             self.advance()
             self.compile_term()
+            self.vmWriter.write_arithmetic(op)
 
         self.decrease_indent()
         self.output_tag("</expression>")
