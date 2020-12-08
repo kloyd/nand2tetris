@@ -3,8 +3,20 @@ import sys
 import re
 
 
-class JackTokenizer:
+def print_xml_token(output_file, token, token_type):
+    if token_type == 'keyword':
+        output_file.write('<keyword> {0} </keyword>\n'.format(token))
+    if token_type == 'identifier':
+        output_file.write('<identifier> {0} </identifier>\n'.format(token))
+    if token_type == 'symbol':
+        output_file.write('<symbol> {0} </symbol>\n'.format(token))
+    if token_type == 'stringConstant':
+        output_file.write('<stringConstant> {0} </stringConstant>\n'.format(token))
+    if token_type == 'integerConstant':
+        output_file.write('<integerConstant> {0} </integerConstant>\n'.format(token))
 
+
+class JackTokenizer:
     keyword_list = ['class', 'constructor', 'method', 'function', 'field', 'static', 'var', 'int', 'char', 'boolean',
                     'void', 'true', 'false', 'null', 'this', 'let', 'do', 'if', 'else', 'while', 'return']
     symbols_list = ['{', '}', '(', ')', '[', ']', '.', ',', ';', '+', '-', '*', '/', '&', '|', '<', '>', '=', '-', '~']
@@ -23,7 +35,7 @@ class JackTokenizer:
             self.parse_tokens(line)
         input_file.close()
         self.rewind_token_list()
-        #self.save_tokens(filename)
+        # self.save_tokens(filename)
 
     def rewind_token_list(self):
         self.token_position = 0
@@ -33,26 +45,14 @@ class JackTokenizer:
         output_file = open(output_filename, 'w')
         output_file.write('<tokens>\n')
         while self.has_more_tokens():
-            token, type  = self.advance()
-            self.print_xml_token(output_file, token, type)
+            token, token_type = self.advance()
+            print_xml_token(output_file, token, token_type)
         output_file.write('</tokens>\n')
         self.rewind_token_list()
 
     def add_token(self, token):
         self.token_list.append(token)
         self.token_type.append(self.get_token_type(token))
-
-    def print_xml_token(self, output_file, token, token_type):
-        if token_type == 'keyword':
-            output_file.write('<keyword> {0} </keyword>\n'.format(token))
-        if token_type == 'identifier':
-            output_file.write('<identifier> {0} </identifier>\n'.format(token))
-        if token_type == 'symbol':
-            output_file.write('<symbol> {0} </symbol>\n'.format(token))
-        if token_type == 'stringConstant':
-            output_file.write('<stringConstant> {0} </stringConstant>\n'.format(token))
-        if token_type == 'integerConstant':
-            output_file.write('<integerConstant> {0} </integerConstant>\n'.format(token))
 
     def parse_tokens(self, line):
         current_token = ""
@@ -68,7 +68,7 @@ class JackTokenizer:
         for c in line:
             # Check for trailing comments
             if self.is_inline_comment(c, line, char_count + 1):
-                    break
+                break
 
             # quoted string constants.
             if c == '"':
@@ -77,7 +77,6 @@ class JackTokenizer:
                     in_quoted_string = False
                 else:
                     in_quoted_string = True
-
 
             if self.is_alpha(c) | self.is_digit(c):
                 current_token = current_token + c
@@ -186,18 +185,18 @@ class JackTokenizer:
 
 
 class Variable:
-    
+
     def __init__(self, var_name, var_type, index):
         self.var_name = var_name
         self.var_type = var_type
         self.var_index = index
-     
+
     def get_type(self):
         return self.var_type
-        
+
     def get_name(self):
         return self.var_name
-    
+
     def get_index(self):
         return self.var_index
 
@@ -207,7 +206,7 @@ class SymbolTable:
         self.statics = {}
         self.fields = {}
         self.args = {}
-        self.locals ={}
+        self.locals = {}
 
     def start_subroutine(self):
         self.args = {}
@@ -227,7 +226,7 @@ class SymbolTable:
 
     def define_var(self, name, var_type, kind):
         var_index = self.var_count(kind)
-        the_var = Variable('','',0)
+        the_var = Variable('', '', 0)
         if kind == "static":
             the_var = Variable(name, var_type, var_index)
             self.statics[name] = the_var
@@ -347,9 +346,13 @@ class VMWriter:
         self.vmFile.write("function " + class_name + "." + function_name + " " + str(nargs))
         self.vmFile.write("\n")
 
+    def write_comment(self, comment):
+        self.vmFile.write("# " + comment)
+        self.vmFile.write("\n")
+
     def close(self):
         self.vmFile.close()
-        
+
 
 class CompilationEngine:
     vmWriter: VMWriter
@@ -434,10 +437,11 @@ class CompilationEngine:
                 if self.current_token == "constructor":
                     self.compile_subroutine("constructor")
 
-                if self.current_token == 'while':
-                    self.compile_while_statement()
+                # doesn't belong here. Handled in compile_statements()
+                # if self.current_token == 'while':
+                #    self.compile_while_statement()
 
-                #self.output_element(self.current_token)
+                # self.output_element(self.current_token)
                 self.advance()
 
         self.output_tag("<symbol> } </symbol>")
@@ -488,7 +492,6 @@ class CompilationEngine:
         self.subroutine_type = subroutine_type
         if subroutine_type == "method":
             self.add_method_var("this", "argument", self.class_name)
-
         self.eat(subroutine_type)
         self.return_type = self.current_token
         self.output_element()
@@ -506,7 +509,6 @@ class CompilationEngine:
             self.compile_subroutine_body(subroutine_name)
             self.decrease_indent()
             self.output_tag("</subroutineDec>")
-
 
     def compile_parameter_list(self):
         """
@@ -554,6 +556,9 @@ class CompilationEngine:
                 if self.subroutine_type == "constructor":
                     self.vmWriter.write_push("constant", str(self.symbol_table.var_count("field")))
                     self.vmWriter.write_call("Memory.alloc", "1")
+                    self.vmWriter.write_pop("pointer", "0")
+                if self.subroutine_type == "method":
+                    self.vmWriter.write_push("argument", "0")
                     self.vmWriter.write_pop("pointer", "0")
                 self.compile_statements()
             if self.current_token == "}":
@@ -614,6 +619,7 @@ class CompilationEngine:
         term = varName | varName '[' expression ']'
         :return:
         """
+        self.vmWriter.write_comment("LET Statement ")
         self.output_tag("<letStatement>")
         self.increase_indent()
         # output 'let'
@@ -629,11 +635,11 @@ class CompilationEngine:
         if self.current_token == '[':
             self.compile_array_sub()
 
-        #self.output_tag("Current token " + self.current_token)
+        # self.output_tag("Current token " + self.current_token)
         self.output_element()
         self.expect_token("=")
         self.advance()
-        #self.output_tag("after equals, before expression " + self.current_token)
+        # self.output_tag("after equals, before expression " + self.current_token)
         self.compile_expression()
         self.output_element()
         self.decrease_indent()
@@ -644,6 +650,7 @@ class CompilationEngine:
 
     def compile_if_statement(self):
         # if (expr) { statement(s) } [ else { statement(s) }
+        self.vmWriter.write_comment("IF Statement")
         self.output_tag("<ifStatement>")
         self.increase_indent()
         self.output_tag("<keyword> if </keyword>")
@@ -654,11 +661,11 @@ class CompilationEngine:
         self.advance()  # move past (
         self.compile_expression()
         self.output_element()
-        #self.output_tag("if expression done.")
-        self.advance()          # move past )
-        self.output_element()   # write out {
-        self.advance()      # move up
-        self.compile_statements()   # do the statements.
+        # self.output_tag("if expression done.")
+        self.advance()  # move past )
+        self.output_element()  # write out {
+        self.advance()  # move up
+        self.compile_statements()  # do the statements.
         # current token should be '}'
         self.expect_token('}')
         self.output_element()
@@ -676,13 +683,14 @@ class CompilationEngine:
             # compile_statements will leave the token pointer at '}'
             self.output_element()
         # output '}'
-        #self.output_tag("after else clause")
-        #self.output_element()
+        # self.output_tag("after else clause")
+        # self.output_element()
         self.decrease_indent()
         self.output_tag("</ifStatement>")
 
     def compile_while_statement(self):
         self.expect_token('while')
+        self.vmWriter.write_comment("WHILE Statement")
         self.output_tag("<whileStatement>")
         self.increase_indent()
         self.output_element()
@@ -702,6 +710,7 @@ class CompilationEngine:
         self.output_tag("</whileStatement>")
 
     def compile_do_statement(self):
+        self.vmWriter.write_comment("DO statement")
         self.output_tag("<doStatement>")
         self.increase_indent()
         self.output_element()
@@ -714,6 +723,7 @@ class CompilationEngine:
         self.output_tag("</doStatement>")
 
     def compile_return_statement(self):
+        self.vmWriter.write_comment("RETURN statement")
         self.output_tag("<returnStatement>")
         self.increase_indent()
         self.output_tag("<keyword> return </keyword>")
@@ -733,6 +743,7 @@ class CompilationEngine:
         # expression: term ( op term)
         # first term is mandatory. once first term compiled, look for op.
         self.output_tag("<expression>")
+        self.vmWriter.write_comment("Expression compile")
         self.increase_indent()
         self.compile_term()
         # term is done, look for operator.
@@ -766,18 +777,18 @@ class CompilationEngine:
                 # term = varName | constant | varName '[' expr ']'
                 # varName = simplevar
                 # varName = class.method(expr)
-                #self.increase_indent()
+                # self.increase_indent()
                 self.term_expression()
             else:
                 if self.current_token == '(':
                     # handle '(' expression ')'
-                    #self.increase_indent()
+                    # self.increase_indent()
                     self.output_element()
                     self.advance()
                     self.compile_expression()
                     self.output_element()
                     self.advance()
-                    #self.decrease_indent()
+                    # self.decrease_indent()
                 else:
                     if self.current_token == '-' or self.current_token == '~':
                         # handle unaryOp
@@ -858,10 +869,10 @@ class CompilationEngine:
         # output ']'
         self.output_element()
         self.advance()
-        #self.output_element()
-        #self.output_tag("compile_array_sub current token " + self.current_token)
+        # self.output_element()
+        # self.output_tag("compile_array_sub current token " + self.current_token)
         # move up to = sign.
-        #self.advance()
+        # self.advance()
 
     def advance(self):
         if self.tokenizer.has_more_tokens():
@@ -957,6 +968,3 @@ if source_filename.endswith('.jack'):
     compile_file(source_filename)
 else:
     compile_directory(source_filename)
-
-
-
