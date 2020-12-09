@@ -619,7 +619,7 @@ class CompilationEngine:
         term = varName | varName '[' expression ']'
         :return:
         """
-        self.vmWriter.write_comment("LET Statement ")
+        # self.vmWriter.write_comment("LET Statement ")
         self.output_tag("<letStatement>")
         self.increase_indent()
         # output 'let'
@@ -710,7 +710,7 @@ class CompilationEngine:
         self.output_tag("</whileStatement>")
 
     def compile_do_statement(self):
-        self.vmWriter.write_comment("DO statement")
+
         self.output_tag("<doStatement>")
         self.increase_indent()
         self.output_element()
@@ -720,6 +720,7 @@ class CompilationEngine:
             self.advance()
         self.output_element()
         self.decrease_indent()
+        self.vmWriter.write_comment("DO statement end.")
         self.output_tag("</doStatement>")
 
     def compile_return_statement(self):
@@ -743,7 +744,7 @@ class CompilationEngine:
         # expression: term ( op term)
         # first term is mandatory. once first term compiled, look for op.
         self.output_tag("<expression>")
-        self.vmWriter.write_comment("Expression compile")
+        # self.vmWriter.write_comment("Expression compile")
         self.increase_indent()
         self.compile_term()
         # term is done, look for operator.
