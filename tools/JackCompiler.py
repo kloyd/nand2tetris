@@ -318,6 +318,12 @@ class VMWriter:
             self.vmFile.write('gt')
         elif command == "~":
             self.vmFile.write('not')
+        elif command == "&amp;":
+            self.vmFile.write('and')
+        elif command == "=":
+            self.vmFile.write('eq')
+        elif command == "|":
+            self.vmFile.write('or')
         else:
             self.vmFile.write(command)
         self.vmFile.write("\n")
@@ -724,7 +730,7 @@ class CompilationEngine:
         self.output_tag("</doStatement>")
 
     def compile_return_statement(self):
-        self.vmWriter.write_comment("RETURN statement")
+        # self.vmWriter.write_comment("RETURN statement")
         self.output_tag("<returnStatement>")
         self.increase_indent()
         self.output_tag("<keyword> return </keyword>")
@@ -771,6 +777,8 @@ class CompilationEngine:
         if self.token_type == "integerConstant" or self == "stringConstant":
             if self.token_type == "integerConstant":
                 self.vmWriter.write_push("constant", self.current_token)
+            if self.token_type == "stringConstant":
+                self.vmWriter.write_push("constant", "s")
             self.output_element()
             self.advance()
         else:
@@ -794,10 +802,15 @@ class CompilationEngine:
                     if self.current_token == '-' or self.current_token == '~':
                         # handle unaryOp
                         # unaryOp term
-                        self.vmWriter.write_arithmetic(self.current_token)
+                        op = self.current_token
                         self.output_element()
                         self.advance()
                         self.compile_term()
+                        if op == '-':
+                            self.vmWriter.write_arithmetic('neg')
+                        if op == '~':
+                            self.vmWriter.write_arithmetic('not')
+
 
         self.decrease_indent()
         self.output_tag("</term>")
