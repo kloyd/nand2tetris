@@ -778,7 +778,7 @@ class CompilationEngine:
             if self.token_type == "integerConstant":
                 self.vmWriter.write_push("constant", self.current_token)
             if self.token_type == "stringConstant":
-                self.vmWriter.write_push("constant", "s")
+                self.vmWriter.write_push("constant", "str")
             self.output_element()
             self.advance()
         else:
