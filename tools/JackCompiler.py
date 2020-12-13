@@ -493,6 +493,7 @@ class CompilationEngine:
     def compile_subroutine(self, subroutine_type):
         # clean slate for method vars.
         self.symbol_table.start_subroutine()
+        self.control_level = 0
         self.output_tag("<subroutineDec>")
         self.increase_indent()
         self.output_element()
@@ -657,7 +658,10 @@ class CompilationEngine:
 
     def compile_if_statement(self):
         # if (expr) { statement(s) } [ else { statement(s) }
-
+        # Control Level stays same for this method
+        #
+        local_level = self.control_level
+        self.control_level = self.control_level + 1
         self.output_tag("<ifStatement>")
         self.increase_indent()
         self.output_tag("<keyword> if </keyword>")
@@ -674,15 +678,18 @@ class CompilationEngine:
         self.advance()  # move up
         # expression compiled, write if-goto true
         #self.vmWriter.write_comment("Start IF Statement " + str(self.control_level))
-        self.vmWriter.write_if("IF_TRUE" + str(self.control_level))
-        self.vmWriter.write_goto("IF_FALSE" + str(self.control_level))
-        self.vmWriter.write_label("IF_TRUE" + str(self.control_level))
-        self.control_level = self.control_level + 1
+        self.vmWriter.write_if("IF_TRUE" + str(local_level))
+        self.vmWriter.write_goto("IF_FALSE" + str(local_level))
+        self.vmWriter.write_label("IF_TRUE" + str(local_level))
+
         self.compile_statements()  # do the statements.
+
         # current token should be '}'
         self.expect_token('}')
+
         self.output_element()
         if self.look_ahead() == "else":
+            self.vmWriter.write_goto("IF_END" + str(local_level))
             # move past '}'
             self.advance()
             # ouput else
@@ -692,16 +699,21 @@ class CompilationEngine:
             self.output_element()
             #  move on to statement(s)
             self.advance()
+            self.vmWriter.write_label("IF_FALSE" + str(local_level))
             self.compile_statements()
             # compile_statements will leave the token pointer at '}'
             self.output_element()
+            self.vmWriter.write_label("IF_END" + str(local_level))
+        else:
+            self.vmWriter.write_label("IF_FALSE" + str(local_level))
         # output '}'
         # self.output_tag("after else clause")
         # self.output_element()
         self.decrease_indent()
+
         self.output_tag("</ifStatement>")
-        self.control_level = self.control_level - 1
-        self.vmWriter.write_comment("End IF Statement " + str(self.control_level))
+
+        # self.vmWriter.write_comment("End IF Statement " + str(self.control_level))
         # write if-false label
 
 
