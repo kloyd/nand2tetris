@@ -382,6 +382,7 @@ class CompilationEngine:
         self.class_name = ""
         self.return_type = "void"
         self.subroutine_type = ""
+        self.control_level = 0
 
     def test_vmwriter(self):
         self.vmWriter.write_push("static", 0)
@@ -656,7 +657,7 @@ class CompilationEngine:
 
     def compile_if_statement(self):
         # if (expr) { statement(s) } [ else { statement(s) }
-        self.vmWriter.write_comment("IF Statement")
+
         self.output_tag("<ifStatement>")
         self.increase_indent()
         self.output_tag("<keyword> if </keyword>")
@@ -671,6 +672,12 @@ class CompilationEngine:
         self.advance()  # move past )
         self.output_element()  # write out {
         self.advance()  # move up
+        # expression compiled, write if-goto true
+        #self.vmWriter.write_comment("Start IF Statement " + str(self.control_level))
+        self.vmWriter.write_if("IF_TRUE" + str(self.control_level))
+        self.vmWriter.write_goto("IF_FALSE" + str(self.control_level))
+        self.vmWriter.write_label("IF_TRUE" + str(self.control_level))
+        self.control_level = self.control_level + 1
         self.compile_statements()  # do the statements.
         # current token should be '}'
         self.expect_token('}')
@@ -693,6 +700,10 @@ class CompilationEngine:
         # self.output_element()
         self.decrease_indent()
         self.output_tag("</ifStatement>")
+        self.control_level = self.control_level - 1
+        self.vmWriter.write_comment("End IF Statement " + str(self.control_level))
+        # write if-false label
+
 
     def compile_while_statement(self):
         self.expect_token('while')
@@ -772,6 +783,9 @@ class CompilationEngine:
             '(' expression ')' | unaryOp term
         :return:
         """
+        # .... need to compile keywordConstants... true | false
+        # ... why strings not working.
+        # ... arrays ???
         self.output_tag("<term>")
         self.increase_indent()
         if self.token_type == "integerConstant" or self == "stringConstant":
@@ -779,6 +793,14 @@ class CompilationEngine:
                 self.vmWriter.write_push("constant", self.current_token)
             if self.token_type == "stringConstant":
                 self.vmWriter.write_push("constant", "str")
+            self.output_element()
+            self.advance()
+        elif self.token_type == "keyword":
+            if self.current_token == "true":
+                self.vmWriter.write_push("constant", "0")
+                self.vmWriter.write_arithmetic("not")
+            if self.current_token == "false":
+                self.vmWriter.write_push("constant", "0")
             self.output_element()
             self.advance()
         else:
