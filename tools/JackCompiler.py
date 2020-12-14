@@ -372,6 +372,7 @@ class CompilationEngine:
 
     def __init__(self, input_file, output_file, base_filename):
 
+        self.expr_count = 0
         self.indent_depth = 0
         self.tokenizer = JackTokenizer(input_file)
         self.vmWriter = VMWriter(output_file)
@@ -716,7 +717,6 @@ class CompilationEngine:
         # self.vmWriter.write_comment("End IF Statement " + str(self.control_level))
         # write if-false label
 
-
     def compile_while_statement(self):
         self.expect_token('while')
         self.vmWriter.write_comment("WHILE Statement")
@@ -766,8 +766,9 @@ class CompilationEngine:
         self.output_element()
         if self.return_type == "void":
             self.vmWriter.write_push("constant", 0)
-        if self.subroutine_type == "constructor":
-            self.vmWriter.write_push("pointer", 0)
+        # compile_expression recognizes "this" keyword.
+        # if self.subroutine_type == "constructor":
+        #    self.vmWriter.write_push("pointer", 0)
         self.vmWriter.write_return()
         self.decrease_indent()
         self.output_tag("</returnStatement>")
@@ -816,6 +817,8 @@ class CompilationEngine:
                 self.vmWriter.write_arithmetic("not")
             if self.current_token == "false":
                 self.vmWriter.write_push("constant", "0")
+            if self.current_token == "this":
+                self.vmWriter.write_push("pointer", "0")
             self.output_element()
             self.advance()
         else:
@@ -855,7 +858,9 @@ class CompilationEngine:
     def compile_expression_list(self):
         self.output_tag("<expressionList>")
         self.increase_indent()
+        self.expr_count = 0
         while self.current_token != ")":
+            self.expr_count += 1
             self.compile_expression()
             if self.current_token == ',':
                 self.output_element()
@@ -877,7 +882,6 @@ class CompilationEngine:
         # got a '.' ??? if so, it's an object var with method call.
         if self.current_token == ".":
             # handle method
-
             self.output_element()
             self.advance()
             # method
@@ -893,24 +897,22 @@ class CompilationEngine:
             # move past )
             self.advance()
 
-            self.vmWriter.write_call(var_name + "." + method_name, 0)
+            self.vmWriter.write_call(var_name + "." + method_name, self.expr_count)
             if previous_token == "do":
                 self.vmWriter.write_pop("temp", 0)
-            #self.vmWriter.write_comment("Function call: " + var_name + "." + method_name)
 
         # ** end refactor
         elif previous_token == "do":
             self.output_element()
             self.advance()
             self.output_element()
+            self.vmWriter.write_push("pointer", "0")
             self.compile_expression_list()
             self.output_element()
             self.advance()
             # Just the local object call e.g. do show() -> Classname.show()
-            self.vmWriter.write_push("pointer", "0")
-            self.vmWriter.write_call(self.class_name +"." + var_name, 0)
+            self.vmWriter.write_call(self.class_name + "." + var_name, self.expr_count + 1)
             self.vmWriter.write_pop("temp", 0)
-            #self.vmWriter.write_comment("Method call: " + self.class_name + "." + var_name)
         if self.current_token == '(':
             # <identifier> '(' expressionList ')'
             self.output_element()
