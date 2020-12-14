@@ -742,14 +742,17 @@ class CompilationEngine:
 
         self.output_tag("<doStatement>")
         self.increase_indent()
+        # self.vmWriter.write_comment("Start Do Statement - " + self.current_token)
         self.output_element()
         self.advance()
-        self.term_expression()
+        # self.vmWriter.write_comment("Start Do Statement - " + self.current_token)
+        # Term Expression needs to know if this is a call or a compute.
+        self.term_expression("do")
         while self.current_token != ";":
             self.advance()
         self.output_element()
         self.decrease_indent()
-        self.vmWriter.write_comment("DO statement end.")
+        # self.vmWriter.write_comment("End Do Statement")
         self.output_tag("</doStatement>")
 
     def compile_return_statement(self):
@@ -821,7 +824,7 @@ class CompilationEngine:
                 # varName = simplevar
                 # varName = class.method(expr)
                 # self.increase_indent()
-                self.term_expression()
+                self.term_expression("")
             else:
                 if self.current_token == '(':
                     # handle '(' expression ')'
@@ -860,22 +863,25 @@ class CompilationEngine:
         self.decrease_indent()
         self.output_tag("</expressionList>")
 
-    def term_expression(self):
+    def term_expression(self, previous_token):
         """
         The inner part of a term expression.
         Also usable from the "do" compile as a do can be do <identifier>.<identifier>(<expressionlist>);
         Or do <identifier>(<expressionlist>);
+        :param previous_token:
         """
         self.output_element()
         var_name = self.current_token
-
+        # self.vmWriter.write_comment("term expression identifier " + var_name + " found.")
         self.advance()
         # got a '.' ??? if so, it's an object var with method call.
         if self.current_token == ".":
             # handle method
+
             self.output_element()
             self.advance()
             # method
+            method_name = self.current_token
             self.output_element()
             self.advance()
             # (
@@ -886,7 +892,25 @@ class CompilationEngine:
             self.output_element()
             # move past )
             self.advance()
+
+            self.vmWriter.write_call(var_name + "." + method_name, 0)
+            if previous_token == "do":
+                self.vmWriter.write_pop("temp", 0)
+            #self.vmWriter.write_comment("Function call: " + var_name + "." + method_name)
+
         # ** end refactor
+        elif previous_token == "do":
+            self.output_element()
+            self.advance()
+            self.output_element()
+            self.compile_expression_list()
+            self.output_element()
+            self.advance()
+            # Just the local object call e.g. do show() -> Classname.show()
+            self.vmWriter.write_push("pointer", "0")
+            self.vmWriter.write_call(self.class_name +"." + var_name, 0)
+            self.vmWriter.write_pop("temp", 0)
+            #self.vmWriter.write_comment("Method call: " + self.class_name + "." + var_name)
         if self.current_token == '(':
             # <identifier> '(' expressionList ')'
             self.output_element()
