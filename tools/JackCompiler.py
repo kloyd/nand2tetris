@@ -804,6 +804,7 @@ class CompilationEngine:
         # ... arrays ???
         self.output_tag("<term>")
         self.increase_indent()
+        # Handle Integer and String Constants.
         if self.token_type == "integerConstant" or self.token_type == "stringConstant":
             if self.token_type == "integerConstant":
                 self.vmWriter.write_push("constant", self.current_token)
@@ -813,9 +814,13 @@ class CompilationEngine:
                 self.vmWriter.write_push("constant", str_length)
                 self.vmWriter.write_call("String.new", "1")
                 #  Iterate over each string Character and call String.appendChar 2
-
+                for a_char in str_constant:
+                    char_code = str(ord(a_char))
+                    self.vmWriter.write_push("constant", char_code)
+                    self.vmWriter.write_call("String.appendChar", "2")
             self.output_element()
             self.advance()
+        # Handle Keyword Constants
         elif self.token_type == "keyword":
             if self.current_token == "true":
                 self.vmWriter.write_push("constant", "0")
@@ -890,7 +895,18 @@ class CompilationEngine:
             self.output_element()
             self.advance()
             # method
+            obj_offset = 0
             method_name = self.current_token
+            # Find out of var_name refers to an Object variable.
+            if self.symbol_table.exists(var_name):
+                var_type = self.symbol_table.type_of(var_name)
+                var_pos = self.symbol_table.index_of(var_name)
+                # self.vmWriter.write_comment("var type " + var_type)
+                var_name = var_type
+                # if so, then push the this n reference
+                # and call the Class method
+                self.vmWriter.write_push("this", var_pos)
+                obj_offset = 1
             self.output_element()
             self.advance()
             # (
@@ -902,7 +918,7 @@ class CompilationEngine:
             # move past )
             self.advance()
 
-            self.vmWriter.write_call(var_name + "." + method_name, self.expr_count)
+            self.vmWriter.write_call(var_name + "." + method_name, self.expr_count + obj_offset)
             if previous_token == "do":
                 self.vmWriter.write_pop("temp", 0)
 
