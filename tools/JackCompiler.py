@@ -804,11 +804,16 @@ class CompilationEngine:
         # ... arrays ???
         self.output_tag("<term>")
         self.increase_indent()
-        if self.token_type == "integerConstant" or self == "stringConstant":
+        if self.token_type == "integerConstant" or self.token_type == "stringConstant":
             if self.token_type == "integerConstant":
                 self.vmWriter.write_push("constant", self.current_token)
             if self.token_type == "stringConstant":
-                self.vmWriter.write_push("constant", "str")
+                str_constant = self.current_token
+                str_length = len(str_constant)
+                self.vmWriter.write_push("constant", str_length)
+                self.vmWriter.write_call("String.new", "1")
+                #  Iterate over each string Character and call String.appendChar 2
+
             self.output_element()
             self.advance()
         elif self.token_type == "keyword":
