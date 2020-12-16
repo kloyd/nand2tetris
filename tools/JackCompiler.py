@@ -81,6 +81,9 @@ class JackTokenizer:
             if self.is_alpha(c) | self.is_digit(c):
                 current_token = current_token + c
 
+            if self.is_symbol(c) and in_quoted_string:
+                current_token = current_token + c
+
             if self.is_symbol(c) and not in_quoted_string:
                 if len(current_token) > 0:
                     self.add_token(current_token)
@@ -813,7 +816,7 @@ class CompilationEngine:
             '(' expression ')' | unaryOp term
         :return:
         """
-        # .... need to compile keywordConstants... true | false
+        # .... need to compile keywordConstants... true | false | null
         # ... why strings not working.
         # ... arrays ???
         self.output_tag("<term>")
@@ -843,6 +846,8 @@ class CompilationEngine:
                 self.vmWriter.write_push("constant", "0")
             if self.current_token == "this":
                 self.vmWriter.write_push("pointer", "0")
+            if self.current_token == "null":
+                self.vmWriter.write_push("constant", "0")
             self.output_element()
             self.advance()
         else:
