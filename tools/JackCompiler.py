@@ -642,21 +642,33 @@ class CompilationEngine:
         self.output_element()
         self.advance()
         # this could be '=' or '['
-
+        process_array = 0
         if self.current_token == '[':
+            process_array = 1
             self.compile_array_sub()
+            var_kind = self.symbol_table.kind_of(var_name)
+            var_pos = self.symbol_table.index_of(var_name)
+            self.vmWriter.write_push(var_kind, str(var_pos))
+            self.vmWriter.write_arithmetic("+")
 
         # self.output_tag("Current token " + self.current_token)
         self.output_element()
         self.expect_token("=")
         self.advance()
         # self.output_tag("after equals, before expression " + self.current_token)
+        # self.vmWriter.write_comment("let - after = " + self.current_token)
         self.compile_expression()
         self.output_element()
         self.decrease_indent()
-        var_kind = self.symbol_table.kind_of(var_name)
-        var_index = self.symbol_table.index_of(var_name)
-        self.vmWriter.write_pop(var_kind, var_index)
+        if process_array == 0:
+            var_kind = self.symbol_table.kind_of(var_name)
+            var_index = self.symbol_table.index_of(var_name)
+            self.vmWriter.write_pop(var_kind, var_index)
+        if process_array == 1:
+            self.vmWriter.write_pop("temp", "0")
+            self.vmWriter.write_pop("pointer", "1")
+            self.vmWriter.write_push("temp", "0")
+            self.vmWriter.write_pop("that", "0")
         self.output_tag("</letStatement>")
 
     def compile_if_statement(self):
@@ -779,7 +791,7 @@ class CompilationEngine:
         # expression: term ( op term)
         # first term is mandatory. once first term compiled, look for op.
         self.output_tag("<expression>")
-        # self.vmWriter.write_comment("Expression compile")
+        # self.vmWriter.write_comment("Expression compile " + self.current_token)
         self.increase_indent()
         self.compile_term()
         # term is done, look for operator.
@@ -863,7 +875,6 @@ class CompilationEngine:
                         if op == '~':
                             self.vmWriter.write_arithmetic('not')
 
-
         self.decrease_indent()
         self.output_tag("</term>")
 
@@ -885,6 +896,7 @@ class CompilationEngine:
         The inner part of a term expression.
         Also usable from the "do" compile as a do can be do <identifier>.<identifier>(<expressionlist>);
         Or do <identifier>(<expressionlist>);
+        also array[index]
         :param previous_token:
         """
         self.output_element()
@@ -944,7 +956,15 @@ class CompilationEngine:
             self.compile_expression_list()
             self.output_element()
         if self.current_token == '[':
+            # Handle an array element.
             self.compile_array_sub()
+            # Add in stuff to return the array element
+            var_kind = self.symbol_table.kind_of(var_name)
+            var_index = self.symbol_table.index_of(var_name)
+            self.vmWriter.write_push(var_kind, str(var_index))
+            self.vmWriter.write_arithmetic("+")
+            self.vmWriter.write_pop("pointer", "1")
+            self.vmWriter.write_push("that", "0")
         else:
             # just a variable?
             if self.symbol_table.exists(var_name):
@@ -963,8 +983,10 @@ class CompilationEngine:
         self.output_element()
         self.advance()
         # do the expression in []
+
         self.compile_expression()
         # output ']'
+
         self.output_element()
         self.advance()
         # self.output_element()
