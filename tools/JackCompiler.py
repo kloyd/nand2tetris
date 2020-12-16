@@ -901,11 +901,12 @@ class CompilationEngine:
             if self.symbol_table.exists(var_name):
                 var_type = self.symbol_table.type_of(var_name)
                 var_pos = self.symbol_table.index_of(var_name)
+                var_kind = self.symbol_table.kind_of(var_name)
                 # self.vmWriter.write_comment("var type " + var_type)
                 var_name = var_type
                 # if so, then push the this n reference
                 # and call the Class method
-                self.vmWriter.write_push("this", var_pos)
+                self.vmWriter.write_push(var_kind, var_pos)
                 obj_offset = 1
             self.output_element()
             self.advance()
