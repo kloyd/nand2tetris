@@ -12,9 +12,21 @@ class Memory {
 
     static Array ram;
 
+    static Array heap;
+    static int freeList;
+
     /** Initializes the class. */
     function void init() {
+
+      //do Output.printString("Memory Init");
+      //do Output.println();
       let ram = 0;
+      let heap = 2048; //heapBase
+
+      let freeList = 2048;  // freelist
+      let heap[0] = 0;       // next freelist entry
+      let heap[1] = 14335;  // length of freelist entry
+
       return;
     }
 
@@ -32,6 +44,21 @@ class Memory {
     /** Finds an available RAM block of the given size and returns
      *  a reference to its base address. */
     function int alloc(int size) {
+      var int findBase;
+      var int findSize;
+      var int nextEntry;
+
+      let findBase = freeList;
+      let findSize = heap[findBase - 1];
+      let nextEntry = heap[findBase];
+      while ( (size < (findSize + 2)) & (~(nextEntry = 0))) {
+          let findBase = nextEntry;
+          let findSize = heap[findBase - 1];
+          let nextEntry = heap[findBase];
+      }
+      
+      //do Output.printString("Found free at ");
+      //do Output.printInt(findBase);
       return 0;
     }
 
