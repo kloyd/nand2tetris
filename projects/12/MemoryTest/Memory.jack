@@ -11,15 +11,11 @@
 class Memory {
 
     static Array ram;
-
     static Array heap;
     static int freeList;
 
     /** Initializes the class. */
     function void init() {
-
-      //do Output.printString("Memory Init");
-      //do Output.println();
       let ram = 0;
       let heap = 2048; //heapBase
 
@@ -47,22 +43,23 @@ class Memory {
       var int findBase;
       var int findSize;
       var int nextEntry;
-      var int blockAddress;
+      var int blockAdr;
 
       let findBase = 0;
       let findSize = heap[findBase + 1];
       let nextEntry = heap[findBase];
-      while ( (size < (findSize + 2)) & (~(nextEntry = 0))) {
+      while ((size < (findSize + 2)) & (~(nextEntry = 0))) {
           let findBase = nextEntry;
           let findSize = heap[findBase - 1];
           let nextEntry = heap[findBase];
       }
       if ( size < (findSize + 2)) {
-        // found
-        let blockAddress = findSize - (size + 2)
-        let heap[findBase - 1] = blockAddress
+        let blockAdr = findSize - (size + 2);
+        let heap[findBase - 1] = blockAdr;
+      } else {
+        let blockAdr = 0;
       }
-      return blockAddress;
+      return blockAdr;
     }
 
     /** De-allocates the given object (cast as an array) by making
