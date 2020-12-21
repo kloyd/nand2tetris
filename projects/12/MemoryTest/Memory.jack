@@ -23,8 +23,8 @@ class Memory {
       let ram = 0;
       let heap = 2048; //heapBase
 
-      let freeList = 2048;  // freelist
-      let heap[0] = 0;       // next freelist entry
+      let freeList = 2048;  // freelist - heap[freeList] is entry point to list.
+      let heap[0] = 0;       // next freelist entry - 0 == end.
       let heap[1] = 14335;  // length of freelist entry
 
       return;
@@ -47,19 +47,22 @@ class Memory {
       var int findBase;
       var int findSize;
       var int nextEntry;
+      var int blockAddress;
 
-      let findBase = freeList;
-      let findSize = heap[findBase - 1];
+      let findBase = 0;
+      let findSize = heap[findBase + 1];
       let nextEntry = heap[findBase];
       while ( (size < (findSize + 2)) & (~(nextEntry = 0))) {
           let findBase = nextEntry;
           let findSize = heap[findBase - 1];
           let nextEntry = heap[findBase];
       }
-      
-      //do Output.printString("Found free at ");
-      //do Output.printInt(findBase);
-      return 0;
+      if ( size < (findSize + 2)) {
+        // found
+        let blockAddress = findSize - (size + 2)
+        let heap[findBase - 1] = blockAddress
+      }
+      return blockAddress;
     }
 
     /** De-allocates the given object (cast as an array) by making
