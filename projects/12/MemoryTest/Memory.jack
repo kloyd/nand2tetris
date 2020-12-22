@@ -55,9 +55,14 @@ class Memory {
       }
       if ( size < (findSize + 2)) {
         let blockAddr = findSize - (size + 2);
-        let heap[findBase - 1] = blockAddr;
+        let heap[findBase + 1] = blockAddr;
+        // Set nextEntry to 0 (end of list)
+        let heap[blockAddr] = 0;
+        // set this block size
+        let heap[blockAddr + 1] = size;
       } else {
-        let blockAddr = 0;
+        // negative 1 for fatal error... out of heap space.
+        let blockAddr = -1;
       }
       return blockAddr;
     }
