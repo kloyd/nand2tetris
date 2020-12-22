@@ -43,7 +43,7 @@ class Memory {
       var int findBase;
       var int findSize;
       var int nextEntry;
-      var int blockAdr;
+      var int blockAddr;
 
       let findBase = 0;
       let findSize = heap[findBase + 1];
@@ -54,12 +54,12 @@ class Memory {
           let nextEntry = heap[findBase];
       }
       if ( size < (findSize + 2)) {
-        let blockAdr = findSize - (size + 2);
-        let heap[findBase - 1] = blockAdr;
+        let blockAddr = findSize - (size + 2);
+        let heap[findBase - 1] = blockAddr;
       } else {
-        let blockAdr = 0;
+        let blockAddr = 0;
       }
-      return blockAdr;
+      return blockAddr;
     }
 
     /** De-allocates the given object (cast as an array) by making
