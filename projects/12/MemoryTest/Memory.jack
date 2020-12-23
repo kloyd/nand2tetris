@@ -23,6 +23,7 @@ class Memory {
       let heap[0] = 0;       // next freelist entry - 0 == end.
       let heap[1] = 14335;  // length of freelist entry
 
+
       return;
     }
 
@@ -44,6 +45,7 @@ class Memory {
       var int findSize;
       var int nextEntry;
       var int blockAddr;
+      var int newHeapSize;
 
       let findBase = 0;
       let findSize = heap[findBase + 1];
@@ -54,12 +56,16 @@ class Memory {
           let nextEntry = heap[findBase];
       }
       if ( size < (findSize + 2)) {
-        let blockAddr = findSize - (size + 2);
-        let heap[findBase + 1] = blockAddr;
+        // Block starts at freeList + findSize.
+        let blockAddr = freeList + findSize;
+        // reduce the freelist by size + 2
+        let newHeapSize = heap[findBase + 1] - (size + 2);
+        let heap[findBase + 1] = newHeapSize;
+        //
+        // Set the size parameter for this block.
+        do Memory.poke(blockAddr - 1, size);
         // Set nextEntry to 0 (end of list)
-        let heap[blockAddr] = 0;
-        // set this block size
-        let heap[blockAddr + 1] = size;
+        do Memory.poke(blockAddr - 2, 0);
       } else {
         // negative 1 for fatal error... out of heap space.
         let blockAddr = -1;
