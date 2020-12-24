@@ -18,12 +18,9 @@ class Memory {
     function void init() {
       let ram = 0;
       let heap = 2048; //heapBase
-
       let freeList = 2048;  // freelist - heap[freeList] is entry point to list.
       let heap[0] = 0;       // next freelist entry - 0 == end.
       let heap[1] = 14335;  // length of freelist entry
-
-
       return;
     }
 
@@ -42,41 +39,58 @@ class Memory {
      *  a reference to its base address. */
     function int alloc(int size) {
       var int findBase;
-      var int findSize;
+      var int foundSize;
       var int nextEntry;
-      var int blockAddr;
+      var int objectAddress;
       var int newHeapSize;
+      var int totalAllocSize;
 
-      let findBase = 0;
-      let findSize = heap[findBase + 1];
-      let nextEntry = heap[findBase];
-      while ((size < (findSize + 2)) & (~(nextEntry = 0))) {
-          let findBase = nextEntry;
-          let findSize = heap[findBase - 1];
-          let nextEntry = heap[findBase];
+      let findBase = freeList;
+      let totalAllocSize = size + 2;
+      // Start with heap base = 2048
+      let foundSize = ram[findBase + 1];
+      let nextEntry = ram[findBase]; // actual ram address
+      while ((size < (foundSize + 2)) & (~(nextEntry = 0))) {
+          let findBase = nextEntry;  // actual ram address.
+          let foundSize = ram[findBase + 1];
+          let nextEntry = ram[findBase]; // actual ram address
       }
-      if ( size < (findSize + 2)) {
-        // Block starts at freeList + findSize.
-        let blockAddr = freeList + findSize;
+      if ( size < (foundSize + 2)) {
+        // Block starts at findBase + foundSize + 2 (0 and 1 are for next/size entries)
+        let objectAddress = (findBase + foundSize) - totalAllocSize;
         // reduce the freelist by size + 2
-        let newHeapSize = heap[findBase + 1] - (size + 2);
-        let heap[findBase + 1] = newHeapSize;
-        //
+        let newHeapSize = foundSize - totalAllocSize;
+        let ram[findBase + 1] = newHeapSize;
         // Set the size parameter for this block.
-        do Memory.poke(blockAddr - 1, size);
+        let ram[objectAddress - 1] = size;
         // Set nextEntry to 0 (end of list)
-        do Memory.poke(blockAddr - 2, 0);
+        let ram[objectAddress - 2] = 0;
       } else {
         // negative 1 for fatal error... out of heap space.
-        let blockAddr = -1;
+        let objectAddress = -1;
       }
-      return blockAddr;
+      return objectAddress;
     }
 
     /** De-allocates the given object (cast as an array) by making
      *  it available for future allocations. */
     function void deAlloc(Array o) {
+      // o = blockAddr
+      // o - 1 = size
+      // o - 2 = nextEntry
+      // find last entry.
+      // add o memory to end of freelist.
+      var int findBase;
+      var int nextEntry;
 
+      let findBase = freeList;
+      let nextEntry = ram[findBase];
+      while(~(nextEntry = 0)) {
+        let findBase = nextEntry;
+        let nextEntry = ram[nextEntry];
+      }
+      // findBase == Ram Address of end of list.
+      let ram[findBase] = o - 2;
       return;
     }
 }
