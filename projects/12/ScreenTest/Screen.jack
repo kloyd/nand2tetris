@@ -14,13 +14,33 @@ class Screen {
     static int screenRam;
     static boolean screenColor;
     static Array ram;
+    static Array twoToThe;
 
     /** Initializes the Screen. */
     function void init() {
       let screenRam = 16384;
-      let screenColor = 0;
+      let screenColor = true;
       let ram = 0;
       do Screen.clearScreen();
+      // powers of two for bit manipulation.
+      let twoToThe = Array.new(16);
+      let twoToThe[0] = 1;
+      let twoToThe[1] = 2;
+      let twoToThe[2] = 4;
+      let twoToThe[3] = 8;
+      let twoToThe[4] = 16;
+      let twoToThe[5] = 32;
+      let twoToThe[6] = 64;
+      let twoToThe[7] = 128;
+      let twoToThe[8] = 256;
+      let twoToThe[9] = 512;
+      let twoToThe[10] = 1024;
+      let twoToThe[11] = 2048;
+      let twoToThe[12] = 4096;
+      let twoToThe[13] = 8192;
+      let twoToThe[14] = 16384;
+      let twoToThe[15] = 16384 + 16384;
+
       return;
     }
 
@@ -46,7 +66,23 @@ class Screen {
 
     /** Draws the (x,y) pixel, using the current color. */
     function void drawPixel(int x, int y) {
+      var int address;
+      var int value;
+      var int xmod;
+      var int twoscomplement;
+      let address = screenRam + (32 * y) + (x / 16);
+      let value = Memory.peek(address);
+      // set x % 16 bit to screenColor
+      let xmod = x / 16;
+      let xmod = x - (xmod * 16);
+      if (screenColor) {
+        let value = value + twoToThe[xmod];
+      } else {
+        let twoscomplement = -1;
+        let value = value & (twoscomplement - twoToThe[xmod]);
+      }
 
+      do Memory.poke(address, value);
       return;
     }
 
