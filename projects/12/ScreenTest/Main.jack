@@ -8,19 +8,6 @@ class Main {
 
     /** Draws a sample pictue on the screen using lines and circles. */
     function void main() {
-        var int loop;
-        let loop = 0;
-        while (loop < 120) {
-          do Screen.drawPixel(loop,200);
-          let loop = loop + 1;
-        }
-        do Screen.setColor(false);
-        let loop = 11;
-        while (loop < 120) {
-          do Screen.drawPixel(loop, 200);
-          let loop = loop + 2;
-        }
-        do Screen.setColor(true);
 
         do Screen.drawLine(0,220,511,220);        // base line
         do Screen.drawRectangle(280,90,410,220);  // house
@@ -31,6 +18,7 @@ class Main {
 
         do Screen.setColor(true);
         do Screen.drawCircle(360,170,3);          // door handle
+
         do Screen.drawLine(280,90,345,35);        // roof
         do Screen.drawLine(345,35,410,90);        // roof
 
