@@ -21,7 +21,7 @@ class Screen {
       let screenRam = 16384;
       let screenColor = true;
       let ram = 0;
-      // do Screen.clearScreen();
+      do Screen.clearScreen();
       // powers of two for bit manipulation.
       let twoToThe = Array.new(16);
       let twoToThe[0] = 1;
