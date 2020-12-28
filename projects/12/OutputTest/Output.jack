@@ -20,13 +20,16 @@ class Output {
     static Array charMaps;
     static int xCursor;
     static int yCursor;
+    static int evenMask;
+    static int oddMask;
 
     /** Initializes the screen, and locates the cursor at the screen's top-left. */
     function void init() {
       do Output.initMap();
       let xCursor = 0;
       let yCursor = 0;
-
+      let evenMask = 255;
+      let oddMask = 255 * 256;
       return;
     }
 
@@ -213,9 +216,9 @@ class Output {
       // row = 256 / 11
       let xPixel = xCursor & 1;
       if (xPixel = 1) {
-        let oddColumn = true;
-      } else {
         let oddColumn = false;
+      } else {
+        let oddColumn = true;
       }
       let xPixel = xCursor * 8;
       let yPixel = yCursor * 11;
@@ -227,12 +230,13 @@ class Output {
         // output charMap[yOffset] to byte at screen location
         let value = Memory.peek(memBase);
         if (oddColumn) {
-          let value = value & 255;
+          let value = value & oddMask; // mask off lower 8 bits
+          let value = value | charMap[yOffset];
         } else {
           // even column, use low order byte
-          let value = value & -32767;
+          let value = value & evenMask; // mask off upper 8 bits.
+          let value = value | (charMap[yOffset] * 256);
         }
-        let value = value | charMap[yOffset];
         do Memory.poke(memBase, value);
         let memBase = memBase + 32;
         let yOffset = yOffset + 1;
@@ -261,6 +265,14 @@ class Output {
      *  and advances the cursor appropriately. */
     function void printString(String s) {
 
+      var int strCount;
+      var int strLen;
+      let strCount = 0;
+      let strLen = s.length();
+      while (strCount < strLen) {
+        do Output.printChar(s.charAt(strCount));
+        let strCount = strCount + 1;
+      }
       return;
     }
 
