@@ -279,6 +279,10 @@ class Output {
     /** Displays the given integer starting at the cursor location,
      *  and advances the cursor appropriately. */
     function void printInt(int i) {
+      var String outInt;
+      let outInt = String.new(10);
+      do outInt.setInt(i);
+      do Output.printString(outInt);
 
       return;
     }
@@ -295,7 +299,10 @@ class Output {
 
     /** Moves the cursor one column back. */
     function void backSpace() {
-
+      let xCursor = xCursor - 1;
+      if (xCursor < 0) {
+        let xCursor = 0;
+      }
       return;
     }
 }
