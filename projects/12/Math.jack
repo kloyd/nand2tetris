@@ -120,15 +120,31 @@ class Math {
       }
 
     }
+
+    /*
+    Compute integer part of y = sqrt(x)
+    Find an integer such that y^2 <= x < (y + 1)^2 for 0 <= x < 2^n
+    By performing binary search in the range 0...2^(n/2) - 1
+
+    Square root of (x) strategy
+    y = 0
+    for j = n/2 -1 down to 0 do
+      if (y + 2^j)^2 <= x then y = y + 2^j
+
+    return y
+
+    */
+
     /** Returns the integer part of the square root of x. */
     function int sqrt(int x) {
       var int y;
       var int j;
       var int squared;
-      let j = 7;
+      let j = 8;
       let y = 0;
       while ( j > -1) {
         let squared = y + twoToThe[j];
+        let squared = squared * squared;
         if (((squared < x) | (squared = x)) & (squared >0)) {
           let y = y + twoToThe[j];
         }
